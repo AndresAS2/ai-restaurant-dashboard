@@ -1,10 +1,14 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-export default function ProtectedRoute({ children }) {
-  const { session, loading } = useAuth();
+export default function ProtectedRoute() {
+  const { session, loading, restaurant } = useAuth();
 
-  if (loading) return <div>Cargando...</div>;
+  if (loading) return <div className="p-8">Cargando sesión...</div>;
 
-  return session ? children : <Navigate to="/login" replace />;
+  if (!session) return <Navigate to="/login" replace />;
+
+  if (!restaurant) return <div className="p-8">No hay restaurante asociado a este usuario.</div>;
+
+  return <Outlet />;
 }
