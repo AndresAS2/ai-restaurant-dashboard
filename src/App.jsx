@@ -1,20 +1,26 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './routes/ProtectedRoute';
+import MasterRoute from './routes/MasterRoute';
 import Login from './pages/Login';
 import DashboardLayout from './layouts/DashboardLayout';
+import MasterLayout from './layouts/MasterLayout';
 import Dashboard from './pages/Dashboard';
 import Orders from './pages/Orders';
 import Menu from './pages/Menu';
 import Customers from './pages/Customers';
 import Conversations from './pages/Conversations';
 import Settings from './pages/Settings';
+import MasterRestaurants from './pages/MasterRestaurants';
+import MasterUsers from './pages/MasterUsers';
+import MasterCreateUser from './pages/MasterCreateUser';
 
 export default function App() {
   return (
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
+
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
@@ -25,6 +31,15 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
           </Route>
         </Route>
+
+        <Route element={<MasterRoute />}>
+          <Route element={<MasterLayout />}>
+            <Route path="/master/restaurants" element={<MasterRestaurants />} />
+            <Route path="/master/users" element={<MasterUsers />} />
+            <Route path="/master/users/create" element={<MasterCreateUser />} />
+          </Route>
+        </Route>
+
         <Route path="*" element={<Navigate to="/dashboard" />} />
       </Routes>
     </AuthProvider>
