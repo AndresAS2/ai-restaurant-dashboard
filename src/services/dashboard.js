@@ -8,7 +8,7 @@ export async function getDashboardMetrics(restaurantId) {
   const [orders, customers, conversations] = await Promise.all([
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
     supabase.from('customers').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
-    supabase.from('conversations').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
+    supabase.from('conversation_history').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
   ]);
 
   return {
