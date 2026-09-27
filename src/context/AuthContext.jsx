@@ -7,38 +7,55 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [restaurant, setRestaurant] = useState(null);
+  const [error, setError] = useState(null);
+
+  async function loadRestaurant(currentSession) {
+    if (!currentSession?.user) {
+      setRestaurant(null);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('restaurant_users')
+      .select('restaurant_id, restaurants(*)')
+      .eq('user_id', currentSession.user.id)
+      .single();
+
+    if (error) {
+      setError(error.message);
+      setRestaurant(null);
+      return;
+    }
+
+    setRestaurant(data?.restaurants || null);
+  }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    async function init() {
+      const { data } = await supabase.auth.getSession();
       setSession(data.session);
+      await loadRestaurant(data.session);
       setLoading(false);
-    });
+    }
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+    init();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+      setSession(nextSession);
+      await loadRestaurant(nextSession);
     });
 
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    async function loadRestaurant() {
-      if (!session?.user) return;
-
-      const { data } = await supabase
-        .from('restaurant_users')
-        .select('restaurant_id, restaurants(*)')
-        .eq('user_id', session.user.id)
-        .single();
-
-      setRestaurant(data?.restaurants || null);
-    }
-
-    loadRestaurant();
-  }, [session]);
+  async function signOut() {
+    await supabase.auth.signOut();
+    setSession(null);
+    setRestaurant(null);
+  }
 
   return (
-    <AuthContext.Provider value={{ session, restaurant, loading }}>
+    <AuthContext.Provider value={{ session, restaurant, loading, error, signOut }}>
       {children}
     </AuthContext.Provider>
   );
