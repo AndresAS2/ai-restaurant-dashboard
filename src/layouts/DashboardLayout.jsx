@@ -3,7 +3,7 @@ import { Home, ShoppingBag, Utensils, Users, MessageSquare, Brain, Heart, Settin
 import { useAuth } from '../context/AuthContext';
 
 const items = [
- {label:'Inicio', path:'/', icon:Home},
+ {label:'Inicio', path:'/dashboard', icon:Home},
  {label:'Pedidos', path:'/orders', icon:ShoppingBag},
  {label:'Menú IA', path:'/menu', icon:Utensils},
  {label:'Clientes', path:'/customers', icon:Users},
@@ -20,7 +20,7 @@ export default function DashboardLayout(){
    <h1 className="text-xl font-bold mb-8">AI Restaurant</h1>
    <p className="text-sm mb-5">{restaurant?.name || 'Restaurante'}</p>
    <nav className="space-y-2">
-    {items.map(({label,path,icon:Icon})=><NavLink key={path} to={path} className="flex gap-3 p-3 rounded hover:bg-gray-100"><Icon size={18}/>{label}</NavLink>)}
+    {items.map(({label,path,icon:Icon})=><NavLink key={path} to={path} className={({isActive})=>`flex gap-3 p-3 rounded ${isActive ? 'bg-gray-200' : 'hover:bg-gray-100'}`}><Icon size={18}/>{label}</NavLink>)}
    </nav>
    <button onClick={signOut} className="flex gap-3 mt-8 p-3"><LogOut size={18}/>Salir</button>
   </aside>
