@@ -14,7 +14,6 @@ export default function Dashboard() {
         setMetrics(data);
       }
     }
-
     load();
   }, [restaurant]);
 
@@ -24,9 +23,7 @@ export default function Dashboard() {
       <p className="mb-6 text-gray-500">Panel de control del restaurante</p>
 
       <div className="bg-white rounded-xl p-6 shadow mb-6">
-        <h3 className="text-xl font-semibold">
-          {restaurant?.name || 'Restaurante'}
-        </h3>
+        <h3 className="text-xl font-semibold">{restaurant?.name || 'Restaurante'}</h3>
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
