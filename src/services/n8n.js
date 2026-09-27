@@ -1,24 +1,41 @@
-import { supabase } from './supabase';
+const N8N_WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
 
-/**
- * Layer prepared for future n8n integration.
- * The dashboard does not modify the n8n workflow directly.
- * It only prepares configuration payloads per restaurant.
- */
 export async function getRestaurantAIContext(restaurantId) {
   if (!restaurantId) return null;
 
-  const { data, error } = await supabase
-    .from('restaurant_settings')
-    .select('*')
-    .eq('restaurant_id', restaurantId)
-    .maybeSingle();
-
-  if (error) throw error;
-
   return {
     restaurant_id: restaurantId,
-    settings: data || {},
+    status: 'ready_for_n8n',
+  };
+}
+
+export async function sendToN8N(payload) {
+  if (!N8N_WEBHOOK_URL) {
+    throw new Error('N8N webhook no configurado');
+  }
+
+  const response = await fetch(N8N_WEBHOOK_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error('Error comunicando con n8n');
+  }
+
+  return await response.json();
+}
+
+export function buildN8NPayload({ restaurantId, message, context }) {
+  return {
+    restaurant_id: restaurantId,
+    message,
+    context,
+    source: 'ai-restaurant-dashboard',
+    timestamp: new Date().toISOString(),
   };
 }
 
