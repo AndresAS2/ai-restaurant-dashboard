@@ -11,6 +11,7 @@ import Menu from './pages/Menu';
 import Customers from './pages/Customers';
 import Conversations from './pages/Conversations';
 import Settings from './pages/Settings';
+import AITestChat from './pages/AITestChat';
 import MasterRestaurants from './pages/MasterRestaurants';
 import MasterUsers from './pages/MasterUsers';
 import MasterCreateUser from './pages/MasterCreateUser';
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="/menu" element={<Menu />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/conversations" element={<Conversations />} />
+            <Route path="/ai-test" element={<AITestChat />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
         </Route>
