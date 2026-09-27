@@ -1,1 +1,25 @@
-{"name":"ai-restaurant-dashboard","private":true,"version":"0.1.0","type":"module","scripts":{"dev":"vite","build":"vite build","preview":"vite preview"},"dependencies":{"@supabase/supabase-js":"latest","react":"latest","react-dom":"latest","react-router-dom":"latest","lucide-react":"latest"},"devDependencies":{"@vitejs/plugin-react":"latest","autoprefixer":"latest","postcss":"latest","tailwindcss":"latest","vite":"latest"}}
+{
+  "name": "ai-restaurant-dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "latest",
+    "lucide-react": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-router-dom": "latest"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "latest",
+    "vite": "latest",
+    "tailwindcss": "latest",
+    "postcss": "latest",
+    "autoprefixer": "latest"
+  }
+}
