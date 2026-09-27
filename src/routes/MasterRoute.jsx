@@ -1,13 +1,16 @@
-import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-export default function MasterRoute({ children }) {
+export default function MasterRoute() {
   const { session, loading } = useAuth();
 
-  if (loading) return null;
+  if (loading) {
+    return <div className="p-8">Cargando sesión...</div>;
+  }
 
-  if (!session?.user) return <Navigate to="/login" replace />;
+  if (!session?.user) {
+    return <Navigate to="/login" replace />;
+  }
 
-  return children || <Outlet />;
+  return <Outlet />;
 }
