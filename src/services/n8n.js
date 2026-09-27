@@ -17,7 +17,16 @@ export async function sendToN8N(payload) {
     throw new Error('Error comunicando con n8n');
   }
 
-  return await response.json();
+  const data = await response.json();
+
+  return {
+    message:
+      data?.message ||
+      data?.output ||
+      data?.response ||
+      'Respuesta recibida del asistente.',
+    raw: data,
+  };
 }
 
 export async function sendAIConfigurationPreview(payload) {
