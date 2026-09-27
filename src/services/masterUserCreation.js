@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from './supabase';
 
 /**
  * Creates a request payload for the secure Edge Function.
