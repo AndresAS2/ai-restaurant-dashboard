@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Home, ShoppingBag, Utensils, Users, MessageSquare, Brain, Heart, Settings, LogOut } from 'lucide-react';
+import { Home, ShoppingBag, Utensils, Users, MessageSquare, Brain, Heart, Settings, LogOut, Bot } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const items = [
@@ -8,6 +8,7 @@ const items = [
  {label:'Menú IA', path:'/menu', icon:Utensils},
  {label:'Clientes', path:'/customers', icon:Users},
  {label:'Conversaciones', path:'/conversations', icon:MessageSquare},
+ {label:'Prueba IA', path:'/ai-test', icon:Bot},
  {label:'Entrenamiento IA', path:'/training', icon:Brain},
  {label:'Fidelización', path:'/loyalty', icon:Heart},
  {label:'Configuración', path:'/settings', icon:Settings}
