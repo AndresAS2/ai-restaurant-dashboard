@@ -55,7 +55,14 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, restaurant, loading, error, signOut }}>
+    <AuthContext.Provider value={{
+      session,
+      user: session?.user || null,
+      restaurant,
+      loading,
+      error,
+      signOut
+    }}>
       {children}
     </AuthContext.Provider>
   );
