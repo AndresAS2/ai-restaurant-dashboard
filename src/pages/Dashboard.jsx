@@ -1,45 +1,9 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { getDashboardMetrics } from '../services/dashboard';
-import StatCard from '../components/StatCard';
-
-export default function Dashboard() {
-  const { restaurant } = useAuth();
-  const [metrics, setMetrics] = useState({
-    orders: 0,
-    customers: 0,
-    conversations: 0,
-    sales_today: 0,
-    ai_interactions: 0,
-  });
-
-  useEffect(() => {
-    async function load() {
-      if (restaurant?.id) {
-        const data = await getDashboardMetrics(restaurant.id);
-        setMetrics(data);
-      }
-    }
-
-    load();
-  }, [restaurant]);
-
-  return (
-    <div>
-      <h2 className="text-3xl font-bold mb-2">Bienvenido</h2>
-      <p className="mb-6 text-gray-500">Panel de control del restaurante con IA</p>
-
-      <div className="bg-white rounded-xl p-6 shadow mb-6">
-        <h3 className="text-xl font-semibold">{restaurant?.name || 'Restaurante'}</h3>
-      </div>
-
-      <div className="grid md:grid-cols-5 gap-4">
-        <StatCard title="Pedidos" value={metrics.orders} />
-        <StatCard title="Clientes" value={metrics.customers} />
-        <StatCard title="Conversaciones" value={metrics.conversations} />
-        <StatCard title="Ventas IA" value={`$${metrics.sales_today}`} />
-        <StatCard title="Atenciones IA" value={metrics.ai_interactions} />
-      </div>
-    </div>
-  );
+import {Link} from 'react-router-dom';
+import Page from '../components/Page';
+import {useResource} from '../hooks/useResource';
+import {getDashboardMetrics} from '../services/dashboard';
+import {money,date} from '../services/format';
+export default function Dashboard(){
+ const r=useResource(getDashboardMetrics),m=r.data||{};
+ return <Page title={r.restaurant?.name||'Inicio'} description="Una vista clara de la actividad de tu restaurante." resource={r}><div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">{[['Ventas entregadas hoy',money(m.sales_today)],['Pedidos activos',m.active||0],['Clientes registrados',m.customers||0],['Mensajes registrados',m.messages||0]].map(([label,value])=><article className="panel" key={label}><p className="text-sm text-slate-500">{label}</p><p className="text-3xl font-semibold mt-4">{value}</p></article>)}</div><article className="panel flex flex-wrap justify-between gap-6"><div><h2 className="text-xl font-semibold">La actividad del mesero virtual</h2><p className="mt-3 text-slate-500">{m.orders||0} pedidos reales · {m.testOrders||0} pedidos de prueba</p><p className="mt-2 text-sm">Último mensaje: {date(m.lastMessage)}</p></div><div className="flex items-center gap-3"><Link className="primary" to="/orders">Ver pedidos</Link><Link className="secondary" to="/conversations">Ver conversaciones</Link></div></article><p className="text-xs text-slate-500">Actualización cada 15 segundos. Ventas: pedidos entregados creados hoy, hora de Bogotá. Las pruebas se excluyen de las ventas; clientes y mensajes incluyen pruebas.</p></Page>;
 }

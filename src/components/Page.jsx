@@ -1,0 +1,3 @@
+export default function Page({title,description,resource,actions,children}){
+ return <section className="space-y-6"><header className="flex flex-wrap justify-between gap-4"><div><p className="eyebrow">TU RESTAURANTE, AL DÍA</p><h1 className="text-3xl font-semibold">{title}</h1><p className="text-slate-500 mt-2">{description}</p></div><div className="flex flex-wrap gap-2 items-center">{actions}{resource&&<button className="secondary" onClick={resource.refresh}>Actualizar</button>}</div></header>{resource?.error&&<p className="notice error" role="alert">{resource.error}</p>}{resource?.loading?<div className="panel">Cargando información…</div>:children}</section>;
+}

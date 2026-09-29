@@ -1,30 +1,9 @@
-import { NavLink, Outlet } from 'react-router-dom';
-import { Home, ShoppingBag, Utensils, Users, MessageSquare, Brain, Heart, Settings, LogOut, Bot } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-
-const items = [
- {label:'Inicio', path:'/dashboard', icon:Home},
- {label:'Pedidos', path:'/orders', icon:ShoppingBag},
- {label:'Menú IA', path:'/menu', icon:Utensils},
- {label:'Clientes', path:'/customers', icon:Users},
- {label:'Conversaciones', path:'/conversations', icon:MessageSquare},
- {label:'Prueba IA', path:'/ai-test', icon:Bot},
- {label:'Entrenamiento IA', path:'/training', icon:Brain},
- {label:'Fidelización', path:'/loyalty', icon:Heart},
- {label:'Configuración', path:'/settings', icon:Settings}
-];
-
+import {NavLink,Outlet} from 'react-router-dom';
+import {useState} from 'react';
+import {Home,ShoppingBag,Utensils,Users,MessageSquare,Settings,LogOut,Bot,Brain,Heart} from 'lucide-react';
+import {useAuth} from '../context/AuthContext';
+const items=[['Inicio','/dashboard',Home],['Pedidos','/orders',ShoppingBag],['Conversaciones','/conversations',MessageSquare],['Clientes','/customers',Users],['Menú','/menu',Utensils],['Configuración','/settings',Settings],['Prueba IA','/ai-test',Bot],['Entrenamiento IA','/training',Brain],['Fidelización','/loyalty',Heart]];
 export default function DashboardLayout(){
- const { signOut, restaurant } = useAuth();
- return <div className="min-h-screen bg-gray-100 flex">
-  <aside className="w-64 bg-white border-r p-5">
-   <h1 className="text-xl font-bold mb-8">AI Restaurant</h1>
-   <p className="text-sm mb-5">{restaurant?.name || 'Restaurante'}</p>
-   <nav className="space-y-2">
-    {items.map(({label,path,icon:Icon})=><NavLink key={path} to={path} className={({isActive})=>`flex gap-3 p-3 rounded ${isActive ? 'bg-gray-200' : 'hover:bg-gray-100'}`}><Icon size={18}/>{label}</NavLink>)}
-   </nav>
-   <button onClick={signOut} className="flex gap-3 mt-8 p-3"><LogOut size={18}/>Salir</button>
-  </aside>
-  <main className="flex-1 p-8"><Outlet/></main>
- </div>
+ const {restaurant,signOut}=useAuth(),[error,setError]=useState('');
+ return <div className="min-h-screen md:flex"><aside className="bg-white border-r md:w-60 md:sticky md:top-0 md:h-screen p-5 flex-shrink-0"><p className="font-bold text-xl tracking-tight text-emerald-900">AI Restaurant<span className="text-emerald-500">.</span></p><p className="text-xs text-slate-500 mt-2 mb-6">{restaurant?.name}</p><nav className="grid grid-cols-2 md:grid-cols-1 gap-1">{items.map(([label,path,Icon])=><NavLink key={path} to={path} className={({isActive})=>'flex gap-3 items-center text-sm p-3 rounded-lg '+(isActive?'bg-emerald-50 text-emerald-900 font-semibold':'text-slate-600 hover:bg-slate-50')}><Icon size={18}/>{label}</NavLink>)}</nav><button className="flex items-center gap-3 mt-6 text-sm" onClick={()=>signOut().catch(e=>setError(e.message))}><LogOut size={17}/>Cerrar sesión</button>{error&&<p role="alert">{error}</p>}</aside><main className="min-w-0 flex-1 p-5 lg:p-10"><Outlet/></main></div>;
 }

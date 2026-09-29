@@ -1,0 +1,47 @@
+# AI Restaurant Dashboard
+
+Panel React conectado directamente a las tablas existentes de Supabase. No necesita n8n para consultar pedidos, clientes, conversaciones o menú.
+
+## Ejecutar
+
+1. Instalar Node.js 22.12 o posterior y ejecutar `npm ci`.
+2. Copiar `.env.example` a `.env.local` y completar la clave **publishable/anon** del proyecto. Nunca usar `service_role` ni claves secretas en variables `VITE_*`.
+3. Ejecutar `npm run dev` y abrir la dirección indicada.
+4. Para compilar: `npm run build`. El resultado está en `dist/`.
+
+El alojamiento debe redirigir las rutas del frontend a `index.html` para permitir recargar `/orders`, `/settings`, etc. No se ha publicado el sitio.
+
+## Acceso real pendiente
+
+La cuenta debe existir en Supabase Authentication y tener una fila en `restaurant_users` con su `user_id` y el `restaurant_id` autorizado. Sin esta asignación, el panel muestra “Acceso pendiente”. La autorización de datos depende de las políticas RLS existentes, no de ocultar botones.
+
+En la revisión del 29-09-2026 no existía la cuenta `suarezjulian2227@gmail.com` y no había asignaciones en `restaurant_users`. El propietario debe crear/invitar la cuenta desde Supabase Authentication y asignarla al restaurante correspondiente desde una sesión administrativa segura. No se crean usuarios privilegiados ni contraseñas desde este repositorio. El acceso real con esa cuenta todavía no está verificado.
+
+## Módulos
+
+- Inicio: métricas de pedidos, clientes y mensajes. Ventas del día incluye pedidos **creados hoy en Bogotá y ya entregados**; no equivale a fecha contable de entrega. Excluye pedidos `is_test` o estado `TEST`.
+- Pedidos: detalle de productos, entrega, pago, filtros reales/prueba y actualización de estado con protección frente a cambios concurrentes.
+- Conversaciones: historial entrante/saliente agrupado por cliente y canal. Busca por nombre o referencia.
+- Clientes: búsqueda, edición de nombre, número de pedidos reales y consumo de pedidos entregados.
+- Menú: crear/editar categorías y productos, precios, descripciones y disponibilidad.
+- Configuración: mensajes, instrucciones y enlaces a imágenes dentro de `restaurant_settings.config`; conserva claves adicionales existentes.
+
+Pedidos, clientes, conversaciones e inicio actualizan cada 15 segundos con la pestaña visible. Las pantallas muestran errores y permiten reintentar. Menú y configuración se actualizan manualmente para evitar sobrescribir formularios.
+
+## Tablas y compatibilidad
+
+Se reutilizan `restaurants`, `restaurant_users`, `orders`, `order_items`, `customers`, `conversation_history`, `menu_categories`, `menu_products` y `restaurant_settings`. Todas las consultas operativas filtran por restaurante, además de RLS. No se crean tablas ni se alteran políticas.
+
+`conversation_history.customer_id` no tiene relación FK declarada: los nombres se resuelven consultando clientes del mismo restaurante. `menu_categories` no tiene `created_at`. `restaurant_settings.restaurant_id` no tiene restricción única: se actualiza la fila existente y se informa error si hay duplicados, en lugar de utilizar un upsert inválido. La creación concurrente de configuración sigue dependiendo del esquema existente y debe hacerse una sola vez por restaurante.
+
+## Funciones conservadas fuera de esta entrega
+
+Entrenamiento IA abre los ajustes existentes. Fidelización no tenía implementación y se identifica como pendiente. Prueba IA conserva su integración opcional y desactiva el envío cuando falta `VITE_N8N_WEBHOOK_URL`. No se modificó ni validó el bot. Los módulos `/master/*` se reservan para `app_metadata.role = master`, requieren servicios administrativos del servidor y siguen fuera del alcance de completar el panel del restaurante. Los adaptadores antiguos de eventos no se usan para calcular métricas del panel.
+
+## Verificación
+
+- `npm test`: métricas, exclusión de pruebas, estados y día local.
+- `npm run test:e2e`: navegación, edición de pedidos/clientes/productos/configuración, conservación de claves, permisos, errores recuperables y diseño móvil. Usa Edge instalado; las respuestas de Supabase y la sesión son **simuladas**, sin escribir datos reales.
+- `npm run build`: compilación de producción.
+
+El esquema, relaciones y existencia de datos se contrastaron con el proyecto Supabase real. Eso no sustituye la prueba final de lectura/escritura con una cuenta autorizada.

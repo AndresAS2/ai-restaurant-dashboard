@@ -1,13 +1,20 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-:root {
-  font-family: Inter, system-ui, sans-serif;
-  background: #f8fafc;
+:root{font-family:Inter,system-ui,sans-serif;color:#172c29;background:#f4f7f6;font-synthesis:none}
+body{margin:0;min-height:100vh}
+@layer components{
+.panel{@apply bg-white border border-slate-200 rounded-2xl p-6;}
+.primary{@apply inline-flex items-center justify-center bg-emerald-800 text-white font-medium text-sm rounded-lg px-4 py-2.5 hover:bg-emerald-900 disabled:opacity-50 disabled:cursor-not-allowed;}
+.secondary{@apply inline-flex items-center justify-center border border-slate-200 bg-white text-slate-700 font-medium text-sm rounded-lg px-4 py-2.5 hover:bg-slate-50 disabled:opacity-50;}
+.badge{@apply inline-flex items-center self-start rounded-full px-3 py-1 bg-emerald-50 text-emerald-900 text-xs font-medium;}
+.notice{@apply p-4 rounded-lg bg-emerald-50 text-emerald-900 text-sm;}
+.notice.error{@apply bg-red-50 text-red-800;}
+.eyebrow{@apply text-xs font-semibold tracking-widest text-emerald-700 mb-2;}
 }
-
-body {
-  margin: 0;
-  min-height: 100vh;
-}
+label{display:block;font-size:.875rem;font-weight:500}
+input:not([type=checkbox]),select,textarea{display:block;width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:8px;background:white;padding:10px 12px;color:#172c29;font:inherit}
+input[type=checkbox]{width:18px;height:18px;accent-color:#065f46}
+textarea{resize:vertical}
+button,a,input,select,textarea{outline-offset:3px}
+button:focus-visible,a:focus-visible{outline:2px solid #059669}

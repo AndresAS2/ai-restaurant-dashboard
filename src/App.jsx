@@ -15,6 +15,7 @@ import AITestChat from './pages/AITestChat';
 import MasterRestaurants from './pages/MasterRestaurants';
 import MasterUsers from './pages/MasterUsers';
 import MasterCreateUser from './pages/MasterCreateUser';
+import PendingModule from './pages/PendingModule';
 
 export default function App() {
   return (
@@ -31,6 +32,8 @@ export default function App() {
             <Route path="/conversations" element={<Conversations />} />
             <Route path="/ai-test" element={<AITestChat />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/training" element={<Settings />} />
+            <Route path="/loyalty" element={<PendingModule title="Fidelización" />} />
           </Route>
         </Route>
 

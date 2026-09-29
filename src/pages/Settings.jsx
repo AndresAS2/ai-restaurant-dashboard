@@ -1,29 +1,11 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { getAIConfig } from '../services/aiConfig';
-import { getRestaurantAIContext } from '../services/n8n';
-
+import {useEffect,useState} from 'react';
+import Page from '../components/Page';
+import {useResource} from '../hooks/useResource';
+import {getAIConfig,saveAIConfig} from '../services/aiConfig';
+const fields=[['welcome','Mensaje de bienvenida'],['personality','Personalidad'],['salesInstructions','Instrucciones de venta'],['tone','Tono'],['policies','Políticas'],['promotions','Promociones'],['paymentMethods','Métodos de pago (descripción)'],['deliveryPolicy','Política de domicilios']];
 export default function Settings(){
- const { restaurant } = useAuth();
- const [config,setConfig] = useState(null);
- const [context,setContext] = useState(null);
-
- useEffect(()=>{
-  if(restaurant?.id){
-   getAIConfig(restaurant.id).then(setConfig).catch(console.error);
-   getRestaurantAIContext(restaurant.id).then(setContext).catch(console.error);
-  }
- },[restaurant]);
-
- return (
-  <div>
-   <h1 className="text-2xl font-bold">Configuración IA</h1>
-   <p className="text-gray-500">Configuración del asistente del restaurante.</p>
-   <div className="mt-4 rounded-lg border p-4">
-    <p>Restaurante: {restaurant?.name || 'Cargando...'}</p>
-    <p>Configuración IA: {config ? 'Disponible' : 'Sin configurar'}</p>
-    <p>Contexto n8n: {context ? 'Preparado' : 'Pendiente'}</p>
-   </div>
-  </div>
- );
+ const r=useResource(getAIConfig,false),[form,setForm]=useState({}),[images,setImages]=useState([]),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[error,setError]=useState('');
+ useEffect(()=>{if(!r.loading){const c=r.data?.config||{};setForm({...c,welcome:c.welcome||c.initialMessage||''});setImages(Array.isArray(c.menu_images)?c.menu_images:[]);}},[r.data,r.loading]);
+ async function save(e){e.preventDefault();setBusy(true);setError('');setNotice('');try{for(const image of images){const u=new URL(image.url);if(u.protocol!=='https:')throw new Error('Las imágenes deben usar enlaces HTTPS.');}await saveAIConfig(r.restaurant.id,{...form,menu_images:images.map((a,i)=>({...a,sort_order:i,active:a.active!==false}))});setNotice('Configuración guardada.');await r.refresh();}catch(e){setError(e.message);}finally{setBusy(false);}}
+ return <Page title="Configuración" description="Ajustes guardados en el restaurante actual." resource={r}><form onSubmit={save} className="space-y-5"><div className="panel grid md:grid-cols-2 gap-4">{fields.map(([key,label])=><label key={key}>{label}<textarea rows="3" value={form[key]||''} onChange={e=>setForm({...form,[key]:e.target.value})}/></label>)}</div><div className="panel space-y-4"><h2 className="text-xl font-semibold">Imágenes del menú</h2><p className="text-sm text-slate-500">Agrega enlaces HTTPS a imágenes públicas, en el orden en que deben mostrarse.</p>{images.map((a,i)=><div key={i} className="grid sm:grid-cols-[1fr_1fr_auto] gap-2"><label>Enlace de imagen<input required type="url" value={a.url||''} onChange={e=>setImages(images.map((x,j)=>j===i?{...x,url:e.target.value}:x))}/></label><label>Descripción<input value={a.caption||''} onChange={e=>setImages(images.map((x,j)=>j===i?{...x,caption:e.target.value}:x))}/></label><button type="button" className="secondary self-end" onClick={()=>setImages(images.filter((_,j)=>i!==j))}>Quitar</button></div>)}<button type="button" className="secondary" onClick={()=>setImages([...images,{url:'',caption:'',active:true}])}>Agregar imagen</button></div><p className="text-sm text-slate-500">Estos ajustes se guardan aquí. Su aplicación en respuestas depende de las funciones que tenga habilitadas el bot.</p>{error&&<p className="notice error" role="alert">{error}</p>}{notice&&<p className="notice" role="status">{notice}</p>}<button className="primary" disabled={busy||r.loading||!!r.error}>{busy?'Guardando…':'Guardar configuración'}</button></form></Page>;
 }

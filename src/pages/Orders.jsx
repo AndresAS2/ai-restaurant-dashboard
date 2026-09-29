@@ -1,38 +1,11 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { getOrders } from '../services/orders';
-
+import {useState} from 'react';
+import Page from '../components/Page';
+import {useResource} from '../hooks/useResource';
+import {getOrders,updateOrderStatus} from '../services/orders';
+import {money,date,isTest,statusLabel} from '../services/format';
 export default function Orders(){
- const { restaurant } = useAuth();
- const [orders, setOrders] = useState([]);
- const [loading, setLoading] = useState(true);
-
- useEffect(() => {
-  async function load(){
-   if (!restaurant?.id) return;
-   const data = await getOrders(restaurant.id);
-   setOrders(data);
-   setLoading(false);
-  }
-  load();
- }, [restaurant]);
-
- return (
-  <div>
-   <h1 className="text-2xl font-bold mb-4">Pedidos</h1>
-   {loading ? <p>Cargando pedidos...</p> : (
-    <div className="space-y-3">
-     {orders.length === 0 && <p className="text-gray-500">No hay pedidos registrados.</p>}
-     {orders.map(order => (
-      <div key={order.id} className="bg-white rounded-xl p-4 shadow">
-       <p className="font-semibold">Pedido #{order.id}</p>
-       <p>Cliente: {order.customers?.name || 'Cliente'}</p>
-       <p>Estado: {order.status || 'Pendiente'}</p>
-       <p>Total: {order.total || 0}</p>
-      </div>
-     ))}
-    </div>
-   )}
-  </div>
- );
+ const r=useResource(getOrders),[filter,setFilter]=useState('all'),[error,setError]=useState(''),[busy,setBusy]=useState(null);
+ async function change(o,status){setBusy(o.id);setError('');try{await updateOrderStatus(r.restaurant.id,o,status);await r.refresh();}catch(e){setError(e.message);}finally{setBusy(null);}}
+ const orders=(r.data||[]).filter(o=>filter==='all'||(filter==='test'?isTest(o):!isTest(o)));
+ return <Page title="Pedidos" description="Productos, entrega y forma de pago, sin perder el detalle." resource={r} actions={<select aria-label="Filtrar pedidos" value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">Todos</option><option value="real">Reales</option><option value="test">Pruebas</option></select>}>{error&&<p role="alert" className="notice error">{error}</p>}{!orders.length&&<div className="panel">No hay pedidos para este filtro.</div>}<div className="grid xl:grid-cols-2 gap-4">{orders.map(o=><article className="panel" key={o.id}><div className="flex justify-between gap-3"><div><h2 className="font-semibold">{o.details?.customer_name||o.customers?.name||'Cliente'}</h2><p className="text-xs text-slate-500">{date(o.created_at)}</p></div><span className="badge">{isTest(o)?'Prueba':statusLabel(o.status)}</span></div><ul className="my-4 space-y-2">{o.order_items?.map(i=><li key={i.id} className="flex justify-between gap-3"><span>{i.quantity} × {i.menu_products?.name||i.product_id}</span><span>{money(i.quantity*i.price)}</span></li>)}</ul><div className="border-t pt-3 flex justify-between font-semibold"><span>Total productos</span><span>{money(o.total)}</span></div><p className="text-sm mt-3">{o.details?.fulfillment==='pickup'?'Recoger en el restaurante':o.details?.delivery_address||'Entrega sin especificar'} {o.details?.neighborhood||''}</p><p className="text-sm text-slate-500">Pago: {o.details?.payment_method||'Sin especificar'}</p>{o.details?.delivery_validation_pending&&<p className="notice mt-3">Validar cobertura y costo del domicilio.</p>}<details className="text-xs mt-3"><summary>Referencia del pedido</summary><p className="break-all">{o.id}</p></details>{!isTest(o)&&<label className="mt-4">Estado<select value={String(o.status).toUpperCase()} disabled={busy===o.id} onChange={e=>change(o,e.target.value)}>{Array.from(new Set([String(o.status).toUpperCase(),'CONFIRMED','PREPARING','READY','DELIVERED','CANCELLED'])).map(s=><option key={s} value={s}>{statusLabel(s)}</option>)}</select></label>}</article>)}</div></Page>;
 }

@@ -22,7 +22,7 @@ export default function MasterCreateUser() {
     setMessage('');
 
     try {
-      await createRestaurantUser(form);
+      await createRestaurantUser({email:form.email,password:form.password,restaurant_id:form.restaurantId});
       setMessage('Usuario creado correctamente');
     } catch (error) {
       setMessage(error.message || 'Error creando usuario');
@@ -35,9 +35,9 @@ export default function MasterCreateUser() {
     <section>
       <h1>Crear usuario de restaurante</h1>
       <form onSubmit={submit}>
-        <input placeholder="Correo" value={form.email} onChange={(e) => updateField('email', e.target.value)} />
-        <input placeholder="Contraseña temporal" value={form.password} onChange={(e) => updateField('password', e.target.value)} />
-        <select value={form.restaurantId} onChange={(e) => updateField('restaurantId', e.target.value)}>
+        <input aria-label="Correo" type="email" required placeholder="Correo" value={form.email} onChange={(e) => updateField('email', e.target.value)} />
+        <input aria-label="Contraseña temporal" type="password" autoComplete="new-password" minLength={8} required placeholder="Contraseña temporal" value={form.password} onChange={(e) => updateField('password', e.target.value)} />
+        <select aria-label="Restaurante" required value={form.restaurantId} onChange={(e) => updateField('restaurantId', e.target.value)}>
           <option value="">Seleccionar restaurante</option>
           {restaurants.map((restaurant) => (
             <option key={restaurant.id} value={restaurant.id}>{restaurant.name}</option>

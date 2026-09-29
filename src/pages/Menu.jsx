@@ -1,39 +1,18 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { getMenu } from '../services/menu';
-
+import {useState} from 'react';
+import Page from '../components/Page';
+import {useResource} from '../hooks/useResource';
+import {getMenu,saveProduct,saveCategory} from '../services/menu';
+import {money} from '../services/format';
+const empty={name:'',description:'',price:'',category_id:'',available:true};
 export default function Menu(){
-  const { restaurant } = useAuth();
-  const [menu, setMenu] = useState({ categories: [], products: [] });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function load(){
-      if(!restaurant?.id) return;
-      const data = await getMenu(restaurant.id);
-      setMenu(data);
-      setLoading(false);
-    }
-
-    load();
-  }, [restaurant]);
-
-  if(loading) return <p>Cargando menú...</p>;
-
-  return (
-    <div>
-      <h1 className="text-2xl font-bold">Menú IA</h1>
-      <p className="text-gray-500 mb-6">Administración inteligente del menú.</p>
-
-      <div className="grid md:grid-cols-2 gap-4">
-        {menu.products.map((product)=>(
-          <div key={product.id} className="bg-white rounded-xl shadow p-4">
-            <h2 className="font-semibold">{product.name}</h2>
-            <p>{product.price}</p>
-            <span>{product.available ? 'Disponible' : 'No disponible'}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+ const r=useResource(getMenu,false),[form,setForm]=useState(null),[cat,setCat]=useState(null),[search,setSearch]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ const update=(k,v)=>setForm(f=>({...f,[k]:v}));
+ async function save(e,type){e.preventDefault();setBusy(true);setError('');try{if(type==='category'){await saveCategory(r.restaurant.id,cat);setCat(null);}else{await saveProduct(r.restaurant.id,form);setForm(null);}await r.refresh();}catch(e){setError(e.message);}finally{setBusy(false);}}
+ return <Page title="Menú" description="Precios y disponibilidad compartidos con el mesero virtual." resource={r} actions={<><button className="secondary" onClick={()=>setCat({name:'',active:true})}>Nueva categoría</button><button className="primary" onClick={()=>setForm({...empty})}>Nuevo producto</button></>}>
+ {error&&<p className="notice error" role="alert">{error}</p>}
+ {cat&&<form className="panel space-y-3" onSubmit={e=>save(e,'category')}><label>Nombre de categoría<input required value={cat.name} onChange={e=>setCat({...cat,name:e.target.value})}/></label><button className="primary" disabled={busy}>Guardar categoría</button><button type="button" className="secondary ml-2" onClick={()=>setCat(null)}>Cancelar</button></form>}
+ {form&&<form onSubmit={save} className="panel grid sm:grid-cols-2 gap-4"><label>Nombre<input required maxLength={150} value={form.name} onChange={e=>update('name',e.target.value)}/></label><label>Precio (COP)<input required type="number" min="0" step="1" value={form.price} onChange={e=>update('price',e.target.value)}/></label><label>Categoría<select value={form.category_id||''} onChange={e=>update('category_id',e.target.value)}><option value="">Sin categoría</option>{r.data?.categories.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</select></label><label className="flex gap-2 items-center"><input type="checkbox" checked={form.available} onChange={e=>update('available',e.target.checked)}/>Disponible</label><label className="sm:col-span-2">Descripción<textarea value={form.description||''} onChange={e=>update('description',e.target.value)}/></label><div><button className="primary" disabled={busy}>{busy?'Guardando…':'Guardar producto'}</button><button type="button" className="secondary ml-2" onClick={()=>setForm(null)}>Cancelar</button></div></form>}
+ <input aria-label="Buscar producto" placeholder="Buscar producto" value={search} onChange={e=>setSearch(e.target.value)}/>
+ <div className="flex flex-wrap gap-2">{r.data?.categories.map(c=><button className="badge" key={c.id} onClick={()=>setCat(c)} title="Editar categoría">{c.name}</button>)}</div>
+ <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">{r.data?.products.filter(p=>p.name.toLowerCase().includes(search.toLowerCase())).map(p=><article className="panel" key={p.id}><span className="badge">{p.available?'Disponible':'Agotado'}</span><h2 className="text-lg font-semibold mt-3">{p.name}</h2><p className="text-slate-500 text-sm mt-1">{p.description}</p><p className="font-semibold mt-3">{money(p.price)}</p><button className="secondary mt-4" onClick={()=>{setForm(p);setError('');}}>Editar producto</button></article>)}</div>{!r.data?.products.length&&<p className="panel">Agrega el primer producto de tu restaurante.</p>}</Page>;
 }
