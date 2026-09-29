@@ -20,7 +20,8 @@ async function setup(page,{empty=false,denied=false}={}){
  if(u.pathname.includes('/auth/'))return route.fulfill({json:{id:'user1',email:'test@example.com',app_metadata:{}}});
  const table=u.pathname.split('/').at(-1);
  if(!(table in db))return route.fulfill({status:404,json:{message:'Unknown table '+table}});
- if(!['restaurant_users'].includes(table))expect(u.searchParams.get('restaurant_id')).toBe('eq.demo-burger-ai');
+ if(req.method()==='POST')expect(req.postDataJSON().restaurant_id).toBe(restaurant.id);
+ else if(!['restaurant_users'].includes(table))expect(u.searchParams.get('restaurant_id')).toBe('eq.demo-burger-ai');
  if(req.method()==='PATCH'||req.method()==='POST'){
  const body=req.postDataJSON();writes.push({table,body});let row=db[table].find(r=>'eq.'+r.id===u.searchParams.get('id'));if(!row){row={id:body.id||2};db[table].push(row);}Object.assign(row,body);return route.fulfill({json:row});
  }
@@ -55,4 +56,56 @@ test('service failure is visible and retry recovers',async({page})=>{
  await setup(page);let fail=true;
  await page.route(host+'/rest/v1/orders?**',async route=>{if(fail)return route.fulfill({status:403,json:{message:'Acceso denegado'}});return route.fallback();});
  await page.goto('/orders');await expect(page.getByRole('alert')).toContainText('Acceso denegado');fail=false;await page.getByRole('button',{name:'Actualizar'}).click();await expect(page.getByText('Total productos').first()).toBeVisible();
+});
+
+test('conversation with latest message is selected first',async({page})=>{
+ const {db}=await setup(page);
+ db.customers.push({id:'c2',name:'Luis',restaurant_id:restaurant.id});
+ db.conversation_history=[
+ {...db.conversation_history[0],created_at:'2026-09-28T10:00:00Z'},
+ {id:'m3',customer_id:'c2',channel:'chat',direction:'incoming',message:'Mensaje de Luis',created_at:'2026-09-28T11:00:00Z'},
+ {...db.conversation_history[1],message:'Último mensaje de Ana',created_at:'2026-09-28T12:00:00Z'}];
+ await page.goto('/conversations');
+ await expect(page.getByText('Último mensaje de Ana')).toBeVisible();
+ await page.getByRole('button',{name:/Luis/}).click();
+ await expect(page.getByText('Mensaje de Luis')).toBeVisible();
+});
+
+test('new category and product save; invalid prices do not submit',async({page})=>{
+ const {writes}=await setup(page,{empty:true});await page.goto('/menu');
+ await page.getByRole('button',{name:'Nueva categoría'}).click();
+ await page.getByLabel('Nombre de categoría').fill('Bebidas');
+ await page.getByRole('button',{name:'Guardar categoría'}).click();
+ await expect(page.getByRole('button',{name:'Bebidas',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Nuevo producto'}).click();
+ await page.getByLabel('Nombre',{exact:true}).fill('Limonada');
+ await page.getByLabel('Precio (COP)').fill('-1');
+ await page.getByRole('button',{name:'Guardar producto'}).click();
+ expect(writes.filter(w=>w.table==='menu_products')).toHaveLength(0);
+ await page.getByLabel('Precio (COP)').fill('9000');
+ await page.getByRole('button',{name:'Guardar producto'}).click();
+ await expect(page.getByRole('heading',{name:'Limonada'})).toBeVisible();
+ expect(writes.find(w=>w.table==='menu_products').body.restaurant_id).toBe(restaurant.id);
+});
+
+test('settings reject insecure image; failed save preserves edits',async({page})=>{
+ const {writes}=await setup(page);await page.goto('/settings');
+ await expect(page.getByLabel('Mensaje de bienvenida')).toHaveValue('Hola');
+ await page.getByLabel('Mensaje de bienvenida').fill('Nuevo saludo');
+ await page.getByRole('button',{name:'Agregar imagen'}).click();
+ await page.getByLabel('Enlace de imagen').fill('http://example.com/menu.png');
+ await page.getByRole('button',{name:'Guardar configuración'}).click();
+ await expect(page.getByRole('alert')).toContainText('HTTPS');expect(writes).toHaveLength(0);
+ await page.getByLabel('Enlace de imagen').fill('https://example.com/menu.png');
+ await page.route(host+'/rest/v1/restaurant_settings?**',route=>route.request().method()==='PATCH'?route.fulfill({status:403,json:{message:'Sin permiso para guardar'}}):route.fallback());
+ await page.getByRole('button',{name:'Guardar configuración'}).click();
+ await expect(page.getByRole('alert')).toContainText('Sin permiso');
+ await expect(page.getByLabel('Mensaje de bienvenida')).toHaveValue('Nuevo saludo');
+});
+
+test('pending access shows logout error',async({page})=>{
+ await setup(page,{denied:true});
+ await page.route(host+'/auth/v1/logout**',route=>route.fulfill({status:422,json:{message:'No se pudo cerrar sesión'}}));
+ await page.goto('/dashboard');await page.getByRole('button',{name:'Cerrar sesión'}).click();
+ await expect(page.getByRole('alert')).toContainText('No se pudo cerrar sesión');
 });

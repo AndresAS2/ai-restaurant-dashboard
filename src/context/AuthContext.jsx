@@ -3,6 +3,7 @@ import {supabase,configured} from '../services/supabase';
 const AuthContext=createContext(null);
 export function AuthProvider({children}){
  const [session,setSession]=useState(null),[loading,setLoading]=useState(true),[restaurant,setRestaurant]=useState(null),[error,setError]=useState('');
+ const [logoutError,setLogoutError]=useState('');
  useEffect(()=>{
  if(!configured){setLoading(false);return;}let alive=true;
  supabase.auth.getSession().then(({data,error})=>{if(alive){setSession(data.session);if(error)setError(error.message);if(!data.session)setLoading(false);}}).catch(e=>{if(alive){setError(e.message);setLoading(false);}});
@@ -17,7 +18,7 @@ export function AuthProvider({children}){
  .catch(e=>{if(alive)setError(e.message);}).finally(()=>{if(alive)setLoading(false);});
  return()=>{alive=false;};
  },[session?.user?.id]);
- async function signOut(){const {error}=await supabase.auth.signOut();if(error)throw error;setSession(null);setRestaurant(null);}
- return <AuthContext.Provider value={{session,user:session?.user||null,restaurant,loading,error,configured,signOut,isMaster:session?.user?.app_metadata?.role==='master'}}>{children}</AuthContext.Provider>;
+ async function signOut(){setLogoutError('');try{const {error}=await supabase.auth.signOut();if(error)throw error;setSession(null);setRestaurant(null);}catch(e){setLogoutError('No se pudo confirmar el cierre de sesión en el servidor. '+e.message);throw e;}}
+ return <AuthContext.Provider value={{session,user:session?.user||null,restaurant,loading,error,logoutError,clearLogoutError:()=>setLogoutError(''),configured,signOut,isMaster:session?.user?.app_metadata?.role==='master'}}>{children}</AuthContext.Provider>;
 }
 export const useAuth=()=>useContext(AuthContext);
