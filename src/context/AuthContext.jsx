@@ -19,6 +19,6 @@ export function AuthProvider({children}){
  return()=>{alive=false;};
  },[session?.user?.id]);
  async function signOut(){setLogoutError('');try{const {error}=await supabase.auth.signOut();if(error)throw error;setSession(null);setRestaurant(null);}catch(e){setLogoutError('No se pudo confirmar el cierre de sesión en el servidor. '+e.message);throw e;}}
- return <AuthContext.Provider value={{session,user:session?.user||null,restaurant,loading,error,logoutError,clearLogoutError:()=>setLogoutError(''),configured,signOut,isMaster:session?.user?.app_metadata?.role==='master'}}>{children}</AuthContext.Provider>;
+ return <AuthContext.Provider value={{session,user:session?.user||null,restaurant,updateRestaurant:setRestaurant,loading,error,logoutError,clearLogoutError:()=>setLogoutError(''),configured,signOut,isMaster:session?.user?.app_metadata?.role==='master'}}>{children}</AuthContext.Provider>;
 }
 export const useAuth=()=>useContext(AuthContext);

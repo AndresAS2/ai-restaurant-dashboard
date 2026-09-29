@@ -11,11 +11,11 @@ Panel React conectado directamente a las tablas existentes de Supabase. No neces
 
 El alojamiento debe redirigir las rutas del frontend a `index.html` para permitir recargar `/orders`, `/settings`, etc. No se ha publicado el sitio.
 
-## Acceso real pendiente
+## Acceso
 
 La cuenta debe existir en Supabase Authentication y tener una fila en `restaurant_users` con su `user_id` y el `restaurant_id` autorizado. Sin esta asignación, el panel muestra “Acceso pendiente”. La autorización de datos depende de las políticas RLS existentes, no de ocultar botones.
 
-En la revisión del 29-09-2026 no existía la cuenta `suarezjulian2227@gmail.com` y no había asignaciones en `restaurant_users`. El propietario debe crear/invitar la cuenta desde Supabase Authentication y asignarla al restaurante correspondiente desde una sesión administrativa segura. No se crean usuarios privilegiados ni contraseñas desde este repositorio. El acceso real con esa cuenta todavía no está verificado.
+La cuenta del propietario ya está confirmada y asociada a Demo Burger AI. Se verificaron autenticación, lectura y guardado al mismo valor con sus permisos reales. Las credenciales no se guardan en este repositorio. Ver [validación funcional](DASHBOARD-VALIDATION.md) para resultados y límites.
 
 ## Módulos
 
@@ -24,7 +24,8 @@ En la revisión del 29-09-2026 no existía la cuenta `suarezjulian2227@gmail.com
 - Conversaciones: historial entrante/saliente agrupado por cliente y canal. Busca por nombre o referencia.
 - Clientes: búsqueda, edición de nombre, número de pedidos reales y consumo de pedidos entregados.
 - Menú: crear/editar categorías y productos, precios, descripciones y disponibilidad.
-- Configuración: mensajes, instrucciones y enlaces a imágenes dentro de `restaurant_settings.config`; conserva claves adicionales existentes.
+- Configuración restaurante: nombre, logo, contacto, dirección, horarios, pagos y recursos visuales.
+- Entrenamiento IA: pantalla independiente con bienvenida, personalidad, tono, reglas, promociones, FAQ e información adicional. Conserva los demás ajustes existentes.
 
 Pedidos, clientes, conversaciones e inicio actualizan cada 15 segundos con la pestaña visible. Las pantallas muestran errores y permiten reintentar. Menú y configuración se actualizan manualmente para evitar sobrescribir formularios.
 
@@ -36,7 +37,7 @@ Se reutilizan `restaurants`, `restaurant_users`, `orders`, `order_items`, `custo
 
 ## Funciones conservadas fuera de esta entrega
 
-Entrenamiento IA abre los ajustes existentes. Fidelización no tenía implementación y se identifica como pendiente. Prueba IA conserva su integración opcional y desactiva el envío cuando falta `VITE_N8N_WEBHOOK_URL`. No se modificó ni validó el bot. Los módulos `/master/*` se reservan para `app_metadata.role = master`, requieren servicios administrativos del servidor y siguen fuera del alcance de completar el panel del restaurante. Los adaptadores antiguos de eventos no se usan para calcular métricas del panel.
+Fidelización no tenía implementación y se identifica como pendiente. Prueba IA conserva su integración opcional y desactiva el envío cuando falta `VITE_N8N_WEBHOOK_URL`. No se modificó ni validó el bot. Los módulos `/master/*` se reservan para `app_metadata.role = master`, requieren servicios administrativos del servidor y siguen fuera del alcance de completar el panel del restaurante. Los adaptadores antiguos de eventos no se usan para calcular métricas del panel.
 
 ## Verificación
 
@@ -44,4 +45,4 @@ Entrenamiento IA abre los ajustes existentes. Fidelización no tenía implementa
 - `npm run test:e2e`: navegación, edición de pedidos/clientes/productos/configuración, conservación de claves, permisos, errores recuperables y diseño móvil. Usa Edge instalado; las respuestas de Supabase y la sesión son **simuladas**, sin escribir datos reales.
 - `npm run build`: compilación de producción.
 
-El esquema, relaciones y existencia de datos se contrastaron con el proyecto Supabase real. Eso no sustituye la prueba final de lectura/escritura con una cuenta autorizada.
+El esquema y las relaciones se contrastaron con Supabase real. La autenticación y las consultas de datos se probaron con la cuenta autorizada. También se comprobaron escrituras al mismo valor en restaurante, configuración, productos y clientes. Los cambios operativos de pedidos se prueban con datos simulados.
