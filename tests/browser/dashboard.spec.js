@@ -38,13 +38,14 @@ test('six modules render, edit and preserve settings; no JS errors',async({page}
  await page.goto('/dashboard');await expect(page.getByRole('heading',{name:'Demo Burger AI',level:1})).toBeVisible();
  await page.getByRole('link',{name:'Pedidos',exact:true}).click();await expect(page.getByText('Total productos').first()).toBeVisible();
  await page.getByRole('combobox',{name:'Estado',exact:true}).selectOption('PREPARING');await expect.poll(()=>writes.some(w=>w.table==='orders'&&w.body.status==='PREPARING')).toBeTruthy();
- await page.getByLabel('Filtrar pedidos').selectOption('test');await expect(page.getByRole('combobox',{name:'Estado',exact:true})).toHaveCount(0);
+ await page.getByRole('group',{name:'Filtrar pedidos'}).getByRole('button',{name:'Pruebas',exact:true}).click();await expect(page.getByRole('combobox',{name:'Estado',exact:true})).toHaveCount(0);
  await page.getByRole('link',{name:'Conversaciones',exact:true}).click();await expect(page.getByText('Quiero una clásica')).toBeVisible();
  await page.getByRole('link',{name:'Clientes',exact:true}).click();await page.getByRole('button',{name:'Editar nombre'}).click();await page.getByLabel('Nombre',{exact:true}).fill('Ana Actualizada');await page.getByRole('button',{name:'Guardar nombre'}).click();await expect(page.getByRole('heading',{name:'Ana Actualizada'})).toBeVisible();
  await page.getByRole('link',{name:'Menú',exact:true}).click();await page.getByRole('button',{name:'Editar producto'}).click();await page.getByLabel('Precio (COP)').fill('23000');await page.getByRole('button',{name:'Guardar producto'}).click();await expect.poll(()=>writes.some(w=>w.table==='menu_products'&&w.body.price===23000)).toBeTruthy();
  await page.getByRole('link',{name:'Configuración',exact:true}).click();await page.getByLabel('Dirección',{exact:true}).fill('Calle 10');await page.getByRole('button',{name:'Guardar configuración'}).click();await expect(page.getByRole('status')).toHaveText('Configuración guardada.');expect(writes.find(w=>w.table==='restaurant_settings').body.config.untouched).toBe('preserved');
  await page.goto('/training');await page.getByLabel('Mensaje de bienvenida').fill('Bienvenido a tu restaurante');await page.getByRole('button',{name:'Guardar entrenamiento'}).click();await expect(page.getByRole('status')).toHaveText('Entrenamiento guardado.');
  await page.goto('/master/users');await expect(page).toHaveURL(/dashboard/);expect(errors).toEqual([]);
+ await expect(page.getByRole('heading',{name:'Demo Burger AI',level:1})).toBeVisible();
  await expect(page.getByText('Cargando información…')).toHaveCount(0);
  await page.screenshot({path:'test-results/dashboard-desktop.png',fullPage:true});
 });
@@ -69,9 +70,9 @@ test('conversation with latest message is selected first',async({page})=>{
  {id:'m3',customer_id:'c2',channel:'chat',direction:'incoming',message:'Mensaje de Luis',created_at:'2026-09-28T11:00:00Z'},
  {...db.conversation_history[1],message:'Último mensaje de Ana',created_at:'2026-09-28T12:00:00Z'}];
  await page.goto('/conversations');
- await expect(page.getByText('Último mensaje de Ana')).toBeVisible();
+ await expect(page.getByRole('article').getByText('Último mensaje de Ana')).toBeVisible();
  await page.getByRole('button',{name:/Luis/}).click();
- await expect(page.getByText('Mensaje de Luis')).toBeVisible();
+ await expect(page.getByRole('article').getByText('Mensaje de Luis')).toBeVisible();
 });
 
 test('new category and product save; invalid prices do not submit',async({page})=>{
@@ -190,4 +191,17 @@ test('long content fits narrow mobile screens',async({page})=>{
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
  }
  await page.screenshot({path:'test-results/qa-mobile.png',fullPage:true});
+});
+
+test('mobile navigation and conversation list work without hiding modules',async({page})=>{
+ await setup(page);await page.setViewportSize({width:390,height:844});await page.goto('/dashboard');
+ await page.getByRole('button',{name:'Abrir navegación'}).click();
+ await expect(page.getByRole('link',{name:'Fidelización',exact:true})).toBeVisible();
+ await page.getByRole('link',{name:'Conversaciones',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Abrir navegación'})).toBeVisible();
+ await page.getByRole('button',{name:/Ana chat/}).click();
+ await expect(page.getByRole('article').getByText('Quiero una clásica')).toBeVisible();
+ await page.getByRole('button',{name:'Volver a conversaciones'}).click();
+ await expect(page.getByLabel('Buscar conversación')).toBeVisible();
+ await page.screenshot({path:'test-results/crm-mobile.png',fullPage:true});
 });

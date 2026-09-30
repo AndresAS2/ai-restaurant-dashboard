@@ -13,7 +13,7 @@ export default function Customers(){
  {error&&<p className="notice error" role="alert">{error}</p>}
  {edit&&<form onSubmit={save} className="panel space-y-3"><label>Nombre<input required maxLength={150} value={edit.name||''} onChange={e=>setEdit({...edit,name:e.target.value})}/></label><button className="primary" disabled={busy}>Guardar nombre</button><button type="button" className="secondary ml-2" disabled={busy} onClick={()=>setEdit(null)}>Cancelar</button></form>}
  <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">{customers.map(c=><article className="panel min-w-0" key={c.id}>
- <h2 className="font-semibold">{c.name||'Sin nombre'}</h2><p className="text-sm text-slate-500 break-all mt-2">{c.phone}</p>
+ <h2 className="font-semibold">{c.display_name}</h2><p className="text-sm text-slate-500 break-all mt-2">{c.display_phone||'Teléfono no registrado'}</p><p className="text-xs text-slate-400 mt-1">Referencia: {c.reference}</p>{c.duplicate_phone&&<p className="text-xs text-amber-800 mt-2">Teléfono compartido con otro registro. Revisar identidad.</p>}
  <p className="mt-4 text-sm">{c.purchase_count} compras entregadas · {money(c.spent)}</p><p className="text-sm">{c.order_count} pedidos reales</p>
  <p className="text-sm mt-2">Última interacción: {c.last_interaction?date(c.last_interaction):'Sin mensajes registrados'}</p>
  <button className="secondary mt-4" disabled={busy} onClick={()=>{setEdit(c);setError('');}}>Editar nombre</button>

@@ -37,7 +37,9 @@ Se reutilizan `restaurants`, `restaurant_users`, `orders`, `order_items`, `custo
 
 ## Funciones conservadas fuera de esta entrega
 
-Fidelización no tenía implementación y se identifica como pendiente. Prueba IA conserva su integración opcional y desactiva el envío cuando falta `VITE_N8N_WEBHOOK_URL`. No se modificó ni validó el bot. Los módulos `/master/*` se reservan para `app_metadata.role = master`, requieren servicios administrativos del servidor y siguen fuera del alcance de completar el panel del restaurante. Los adaptadores antiguos de eventos no se usan para calcular métricas del panel.
+Fidelización no tenía implementación y se identifica como pendiente. Prueba IA conserva su integración opcional y desactiva el envío cuando falta `VITE_N8N_WEBHOOK_URL`. La fase 7 optimizó y probó consultas simples en el chat n8n; no se activó WhatsApp. Los módulos `/master/*` se reservan para `app_metadata.role = master`, requieren servicios administrativos del servidor y siguen fuera del alcance de completar el panel del restaurante. Los adaptadores antiguos de eventos no se usan para calcular métricas del panel.
+
+La profesionalización visual, los cambios de rendimiento y los resultados actuales están en [validación de fases](PHASES-VALIDATION.md).
 
 ## Verificación
 

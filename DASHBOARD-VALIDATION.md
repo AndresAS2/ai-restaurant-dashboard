@@ -16,13 +16,13 @@ No se crean tablas, funciones SQL ni políticas. Nombre/WhatsApp y el resto de a
 
 Para Realtime, el frontend incluye una suscripción filtrada por restaurant_id a INSERT/UPDATE de orders y order_items, limpieza al salir y agrupación de eventos. Está deshabilitada por defecto porque no hay tablas en la publicación del proyecto. Para activarla, habilitar ambas tablas en la publicación supabase_realtime y establecer VITE_SUPABASE_REALTIME=true. Se mantiene consulta cada 15 segundos como respaldo, también para eliminaciones. La entrega real de eventos todavía no se ha verificado; no se cambiaron publicaciones ni permisos.
 
-El bot no se modificó. Debe consumir los nuevos campos de perfil, FAQ e información adicional y registrar metadata.response_time_ms para completar la integración. Guardar entrenamiento no demuestra que el bot lo esté usando.
+La fase posterior modificó únicamente las rutas rápidas del workflow y las probó en el chat de prueba; ver PHASES-VALIDATION.md. Sigue pendiente comprobar consumo de nuevos campos de perfil, FAQ e información adicional y registrar metadata.response_time_ms. Guardar entrenamiento no demuestra que todos sus campos se estén usando.
 
 ## Pruebas
 
-- Compilación de producción correcta; permanece un aviso de tamaño del archivo JavaScript.
-- 11 pruebas de navegador con Supabase simulado: seis módulos, formularios, filtros, separación de ajustes, preservación de datos, metadatos, errores, permisos y móvil.
-- 2 pruebas unitarias de métricas.
+- Compilación de producción correcta; la carga por rutas eliminó el aviso de tamaño del archivo inicial JavaScript.
+- 15 pruebas de navegador con Supabase simulado: módulos, formularios, filtros, separación de ajustes, preservación de datos, metadatos, errores, permisos y móvil.
+- 6 pruebas unitarias de métricas, identidad de clientes y rutas rápidas.
 - Autenticación real y lectura correctas con la cuenta del propietario: 25 pedidos, 71 clientes, 127 mensajes, 6 categorías, 12 productos y 1 configuración al verificar.
 - Escrituras autenticadas verificadas en restaurants, restaurant_settings, menu_products y customers mediante actualización al mismo valor con condición de coincidencia. No se cambiaron contenidos.
 - Los cambios de estado de pedidos se probaron con datos simulados para no avanzar pedidos reales.
