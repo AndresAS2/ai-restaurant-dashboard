@@ -8,9 +8,10 @@ const days=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'
 export default function Settings(){
  const r=useResource(getRestaurantProfile,false),{updateRestaurant}=useAuth();
  const [form,setForm]=useState({}),[hours,setHours]=useState([]),[images,setImages]=useState([]),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[error,setError]=useState('');
+ useEffect(()=>{setNotice('');},[form,hours,images]);
  useEffect(()=>{if(!r.loading&&!r.error&&r.data){const c=r.data.settings?.config||{},p=c.restaurant_profile||{};
  setForm({...p,name:r.data.restaurant.name,whatsapp_number:r.data.restaurant.whatsapp_number||'',paymentMethods:c.paymentMethods||'',deliveryPolicy:c.deliveryPolicy||''});
- setHours(days.map(day=>({day,closed:true,open:'09:00',close:'21:00',...(p.hours||[]).find(h=>h.day===day)})));
+ setHours(days.map(day=>({day,closed:true,open:'09:00',close:'21:00',...(Array.isArray(p.hours)?p.hours:[]).find(h=>h?.day===day)})));
  setImages(Array.isArray(c.menu_images)?c.menu_images:[]);
  }},[r.data,r.loading,r.error]);
  const field=(k,v)=>setForm(f=>({...f,[k]:v}));
@@ -25,7 +26,7 @@ export default function Settings(){
  setNotice('Configuración guardada.');
  }catch(e){setError((identitySaved?'Nombre y WhatsApp guardados; los demás ajustes no se guardaron. Reintenta. ':'')+e.message);}finally{setBusy(false);}
  }
- return <Page title="Configuración restaurante" description="Identidad, contacto y operación de tu negocio." resource={r}><form onSubmit={save} className="space-y-5">
+ return <Page title="Configuración restaurante" description="Identidad, contacto y operación de tu negocio." resource={r}><form onSubmit={save} onChange={()=>setNotice('')} className="space-y-5">
  <div className="panel grid md:grid-cols-2 gap-4">
  <label>Nombre del restaurante<input required maxLength={150} value={form.name||''} onChange={e=>field('name',e.target.value)}/></label>
  <label>WhatsApp<input type="tel" maxLength={30} value={form.whatsapp_number||''} onChange={e=>field('whatsapp_number',e.target.value)}/></label>

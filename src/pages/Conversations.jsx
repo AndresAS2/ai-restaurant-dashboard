@@ -10,7 +10,7 @@ function latency(metadata){
 export default function Conversations(){
  const r=useResource(getConversations),[selected,setSelected]=useState(''),[search,setSearch]=useState('');
  const all=r.data||[],key=h=>JSON.stringify([h.customer_id,h.channel||'chat']);
- const groups=[...new Map(all.map(h=>[key(h),h])).entries()].sort((a,b)=>b[1].created_at.localeCompare(a[1].created_at));
+ const groups=[...new Map(all.map(h=>[key(h),h])).entries()].sort((a,b)=>String(b[1].created_at||'').localeCompare(String(a[1].created_at||'')));
  const filtered=groups.filter(([id,h])=>(id+' '+(h.customer?.name||'')+' '+(h.customer?.phone||'')).toLowerCase().includes(search.toLowerCase()));
  const active=filtered.some(([id])=>id===selected)?selected:filtered[0]?.[0],messages=all.filter(h=>key(h)===active),last=messages.at(-1);
  return <Page title="Conversaciones" description="Historial completo y contexto de cada atención." resource={r}>

@@ -1,5 +1,5 @@
 import {isTest,normalizeStatus} from './format.js';
-const day=v=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Bogota',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(v));
+const day=v=>Number.isFinite(new Date(v).getTime())?new Intl.DateTimeFormat('en-CA',{timeZone:'America/Bogota',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(v)):null;
 export function summarize(orders=[],customers=[],history=[],now=new Date()){
  const real=orders.filter(o=>!isTest(o));
  return {orders:real.length,testOrders:orders.length-real.length,customers:customers.length,messages:history.length,conversations:new Set(history.map(h=>h.customer_id).filter(Boolean)).size,

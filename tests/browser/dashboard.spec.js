@@ -157,3 +157,37 @@ test('pending aliases and menu filters show clear results',async({page})=>{
  await page.goto('/menu');await page.getByLabel('Filtrar disponibilidad').selectOption('unavailable');
  await expect(page.getByText('No hay productos para estos filtros.')).toBeVisible();
 });
+
+test('missing dates and legacy schedules do not crash screens',async({page})=>{
+ const {db}=await setup(page);
+ db.orders[0].created_at=null;db.orders[1].created_at='invalid-date';
+ db.conversation_history[0].created_at=null;
+ db.restaurant_settings[0].config.restaurant_profile={hours:{monday:'09:00'}};
+ for(const route of ['/dashboard','/orders','/conversations','/settings']){
+ await page.goto(route);await expect(page.getByText('Cargando información…')).toHaveCount(0);
+ await expect(page.getByRole('heading',{name:'No se pudo mostrar esta pantalla'})).toHaveCount(0);
+ await expect(page.getByRole('alert')).toHaveCount(0);
+ }
+ await expect(page.getByLabel('Nombre del restaurante')).toHaveValue('Demo Burger AI');
+});
+
+test('saved notices clear after further edits',async({page})=>{
+ await setup(page);
+ for(const [route,label,button] of [['/settings','Dirección','Guardar configuración'],['/training','Personalidad','Guardar entrenamiento']]){
+ await page.goto(route);await expect(page.getByText('Cargando información…')).toHaveCount(0);
+ await page.getByLabel(label,{exact:true}).fill('Texto guardado');
+ await page.getByRole('button',{name:button}).click();await expect(page.getByRole('status')).toBeVisible();
+ await page.getByRole('textbox',{name:label,exact:true}).fill('Cambio sin guardar');await expect(page.getByRole('status')).toHaveCount(0);
+ }
+});
+
+test('long content fits narrow mobile screens',async({page})=>{
+ const {db}=await setup(page);await page.setViewportSize({width:360,height:800});
+ const long='NombreMuyLargoSinEspacios'.repeat(8);
+ db.customers[0].name=long;db.menu_products[0].name=long;db.orders[0].details.customer_name=long;
+ for(const route of ['/orders','/customers','/menu','/conversations','/settings','/training']){
+ await page.goto(route);await expect(page.getByText('Cargando información…')).toHaveCount(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
+ }
+ await page.screenshot({path:'test-results/qa-mobile.png',fullPage:true});
+});

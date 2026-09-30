@@ -3,6 +3,9 @@
 @tailwind utilities;
 :root{font-family:Inter,system-ui,sans-serif;color:#172c29;background:#f4f7f6;font-synthesis:none}
 body{margin:0;min-height:100vh}
+main,aside{overflow-wrap:anywhere}
+.panel{min-width:0}
+input,select,textarea{min-width:0;max-width:100%}
 @layer components{
 .panel{@apply bg-white border border-slate-200 rounded-2xl p-6;}
 .primary{@apply inline-flex items-center justify-center bg-emerald-800 text-white font-medium text-sm rounded-lg px-4 py-2.5 hover:bg-emerald-900 disabled:opacity-50 disabled:cursor-not-allowed;}
