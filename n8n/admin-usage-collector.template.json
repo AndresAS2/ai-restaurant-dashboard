@@ -1,0 +1,111 @@
+{
+  "name": "ADMIN - Sincronizar consumo real (configurar credenciales)",
+  "active": false,
+  "nodes": [
+    {
+      "id": "manual",
+      "name": "Sincronizar al configurar API",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "executions",
+      "name": "Leer ejecuciones terminadas",
+      "type": "n8n-nodes-base.n8n",
+      "typeVersion": 1,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "resource": "execution",
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "workflowId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "xQQohsOmooxDCDxB"
+          }
+        },
+        "options": {
+          "activeWorkflows": true
+        }
+      }
+    },
+    {
+      "id": "extract",
+      "name": "Extraer mediciones sin duplicar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "function extractUsage(e){\n const runs=e.data?.resultData?.runData;\n if(!runs||!e.id||!e.startedAt||e.workflowId!=='xQQohsOmooxDCDxB')return null;\n if(!['success','error','canceled','crashed'].includes(e.status))return null;\n const contexts=['Restore Pending Context','Restaurant Context and Policies','SaaS Tenant Resolver'].flatMap(name=>(runs[name]||[]).flatMap(r=>r.data?.main?.flat().filter(Boolean).map(i=>i.json)||[]));\n const context=contexts.find(c=>c?.restaurant_id&&c.tenant_valid===true);\n const restaurant_id=context?.restaurant_id||null;\n const agents=['Intent Classifier AI Real','Virtual waiter','Guardrails'];\n let input=0,output=0,total=0,agentRuns=0,unknown=false,estimated=false;\n for(const name of agents)for(const run of runs[name]||[]){\n   // Guardrails only counts if it actually reports model usage.\n   const t=run.metadata?.tracing;\n   if(name==='Guardrails'&&!t?.['llm.tokens.total'])continue;\n   agentRuns++;\n   const values=['llm.tokens.in','llm.tokens.out','llm.tokens.total'].map(k=>t?.[k]);\n   if(values.some(v=>!Number.isSafeInteger(v)||v<0)){unknown=true;continue;}\n   input+=values[0];output+=values[1];total+=values[2];\n   if(t['llm.tokens.estimated']!==false)estimated=true;\n }\n // Unrecognised model activity must not silently become a zero bill.\n const modelActivity=Object.keys(runs).some(n=>/Gemini|OpenAI|Chat Model/i.test(n));\n if(!agentRuns&&modelActivity)unknown=true;\n const measurement=unknown?'unavailable':estimated?'estimated':agentRuns?'provider':'no_ai';\n const normalized=runs.Normalize?.[0]?.data?.main?.[0]?.[0]?.json;\n return {workflow_id:e.workflowId,execution_id:String(e.id),restaurant_id,started_at:e.startedAt,finished_at:e.stoppedAt||null,\n status:e.status,is_test:normalized?.type?normalized.type==='chat':e.mode==='manual',\n input_tokens:unknown?null:input,output_tokens:unknown?null:output,total_tokens:unknown?null:total,\n measurement,agent_runs:agentRuns,duration_ms:e.stoppedAt?Math.max(0,Date.parse(e.stoppedAt)-Date.parse(e.startedAt)):null};\n}\n\nconst rows=$input.all().flatMap(i=>Array.isArray(i.json.data)?i.json.data:[i.json]).map(extractUsage).filter(Boolean);\nreturn rows.length?[{json:{rows}}]:[];"
+      }
+    },
+    {
+      "id": "save",
+      "name": "Guardar consumo privado",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        720,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into private.ai_execution_usage(workflow_id,execution_id,restaurant_id,started_at,finished_at,status,is_test,input_tokens,output_tokens,total_tokens,measurement,agent_runs,duration_ms)\nselect workflow_id,execution_id,restaurant_id,started_at,finished_at,status,is_test,input_tokens,output_tokens,total_tokens,measurement,agent_runs,duration_ms\nfrom jsonb_to_recordset($1::jsonb) as x(workflow_id text,execution_id text,restaurant_id text,started_at timestamptz,finished_at timestamptz,status text,is_test boolean,input_tokens bigint,output_tokens bigint,total_tokens bigint,measurement text,agent_runs integer,duration_ms bigint)\nwhere workflow_id='xQQohsOmooxDCDxB'\non conflict(workflow_id,execution_id) do update set restaurant_id=excluded.restaurant_id,input_tokens=excluded.input_tokens,output_tokens=excluded.output_tokens,total_tokens=excluded.total_tokens,measurement=excluded.measurement,status=excluded.status,finished_at=excluded.finished_at,agent_runs=excluded.agent_runs,duration_ms=excluded.duration_ms,synced_at=now()\nreturning execution_id;",
+        "options": {
+          "queryReplacement": "={{ [JSON.stringify($json.rows)] }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Sincronizar al configurar API": {
+      "main": [
+        [
+          {
+            "node": "Leer ejecuciones terminadas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer ejecuciones terminadas": {
+      "main": [
+        [
+          {
+            "node": "Extraer mediciones sin duplicar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer mediciones sin duplicar": {
+      "main": [
+        [
+          {
+            "node": "Guardar consumo privado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

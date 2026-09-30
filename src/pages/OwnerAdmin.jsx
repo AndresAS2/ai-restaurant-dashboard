@@ -1,0 +1,40 @@
+import {useEffect,useState} from 'react';
+import {ShieldCheck,Plus,Trash2} from 'lucide-react';
+import {getOwnerUsage,saveOwnerFinance} from '../services/ownerAdmin';
+import {calculateFinance,emptyFinance} from '../services/financeMath';
+const number=n=>new Intl.NumberFormat('es-CO',{maximumFractionDigits:6}).format(n);
+const present=(n,suffix='')=>n==null?'Pendiente':number(n)+suffix;
+const monthNow=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Bogota',year:'numeric',month:'2-digit'}).format(new Date());
+function RestaurantUsage({row,month}){
+ const [finance,setFinance]=useState(()=>({...emptyFinance(),...row.finance})),[saved,setSaved]=useState(Boolean(row.finance)),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[error,setError]=useState('');
+ const result=calculateFinance(row,saved?finance:null);
+ function change(key,value){setFinance(f=>({...f,[key]:value}));setSaved(true);setNotice('Cambios sin guardar');}
+ async function save(e){e.preventDefault();setBusy(true);setError('');try{await saveOwnerFinance(row.restaurant_id,month,finance);setSaved(true);setNotice('Costos guardados.');}catch(e){setError(e.message);}finally{setBusy(false);}}
+ const fields=[['Mensajes',present(row.messages)],['Tokens medidos',present(row.tokens_used)],['Costo IA calculado',present(result.ai,' USD')],['Archivos en Storage',present(row.storage_mb,' MB')],['Costo total calculado',present(result.total,' USD')],['Plan',finance.plan_name?(finance.plan_name+' · '+present(finance.plan_price_cop===''?null:finance.plan_price_cop,' COP')):'Sin configurar'],['Margen calculado',present(result.margin,'%')],['Datos BD actuales',present(row.db_bytes/1000000,' MB')]];
+ return <article className="panel space-y-5"><header className="flex flex-wrap justify-between gap-3"><div><h2 className="font-semibold text-xl">{row.restaurant_name||'Restaurante sin nombre'}</h2><p className="text-xs text-slate-500 break-all">{row.restaurant_id}</p></div><span className="badge">{row.status||'Sin estado'}</span></header>
+ <dl className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5">{fields.map(([label,value])=><div key={label} className="min-w-0"><dt className="text-sm text-slate-500">{label}</dt><dd className="mt-2 text-xl font-semibold break-words">{value}</dd></div>)}</dl>
+ <div className="text-xs text-slate-500 space-y-1"><p>Mensajes entrantes y salientes del mes; incluye {number(row.test_messages||0)} de prueba.</p><p>{row.measured_executions||0} ejecuciones medidas · {row.unmeasured_executions||0} sin tokens completos. Incluye consumo de pruebas.</p><p>Última sincronización: {row.last_synced_at?new Date(row.last_synced_at).toLocaleString('es-CO',{timeZone:'America/Bogota'}):'Pendiente'}. No equivale a cobertura completa del mes.</p><p>Datos BD: tamaño lógico actual de registros, sin índices ni copias. Storage no incluye imágenes alojadas fuera de Supabase.</p></div>
+ <details className="border-t pt-4"><summary className="cursor-pointer font-semibold">Editar plan y costos</summary><form onSubmit={save} className="mt-5 space-y-5">
+ <p className="text-sm text-slate-500">Configura los importes de este restaurante para el mes seleccionado. Si compartes una VPS, introduce solo la parte asignada a este restaurante. El cálculo usa estos valores y los tokens medidos; no es una factura del proveedor.</p>
+ <fieldset disabled={busy} className="space-y-5"><div className="grid sm:grid-cols-2 gap-4"><label>Nombre del plan<input maxLength={100} value={finance.plan_name||''} onChange={e=>change('plan_name',e.target.value)}/></label>
+ {[['plan_price_cop','Precio mensual del plan (COP)',0],['usd_cop','Cambio: COP por 1 USD',0.00000001],['input_rate_usd','IA: USD por millón de tokens de entrada',0],['output_rate_usd','IA: USD por millón de tokens de salida',0]].map(([key,label,min])=><label key={key}>{label}<input type="number" min={min} max="999999999999" step="0.00000001" value={finance[key]??''} onChange={e=>change(key,e.target.value)}/></label>)}</div>
+ <p className="text-sm text-slate-500">Las tarifas IA se aplican al consumo medido de este mes. Usa las de tu proveedor; si cambias de modelo o proveedor, verifica las tarifas antes de compararlo con su factura. Deja vacío un dato desconocido; 0 significa gratuito.</p>
+ <div className="space-y-3"><h3 className="font-medium">Servicios y costos mensuales</h3>{finance.services.map((s,i)=><div key={i} className="grid sm:grid-cols-[1fr_140px_90px_auto] gap-2 items-end">
+ <label>Servicio {i+1}<input required maxLength={100} placeholder="n8n, Supabase, VPS…" value={s.name} onChange={e=>change('services',finance.services.map((v,j)=>j===i?{...v,name:e.target.value}:v))}/></label>
+ <label>Importe {i+1}<input required type="number" min="0" max="999999999999" step="0.00000001" value={s.amount} onChange={e=>change('services',finance.services.map((v,j)=>j===i?{...v,amount:e.target.value}:v))}/></label>
+ <label>Moneda {i+1}<select value={s.currency} onChange={e=>change('services',finance.services.map((v,j)=>j===i?{...v,currency:e.target.value}:v))}><option>USD</option><option>COP</option></select></label>
+ <button type="button" className="secondary" aria-label={'Eliminar servicio '+(i+1)} onClick={()=>change('services',finance.services.filter((_,j)=>j!==i))}><Trash2 size={16}/></button></div>)}
+ <button type="button" className="secondary" disabled={finance.services.length>=30} onClick={()=>change('services',[...finance.services,{name:'',amount:'',currency:'USD'}])}><Plus size={16}/>Agregar servicio</button></div>
+ <label>Fuente o notas de los importes<textarea maxLength={2000} value={finance.source_note||''} onChange={e=>change('source_note',e.target.value)} placeholder="Factura, proveedor o tarifa utilizada"/></label>
+ <button className="primary">{busy?'Guardando…':'Guardar plan y costos'}</button></fieldset>
+ {notice&&<p role="status" className="notice">{notice}</p>}{error&&<p role="alert" className="notice error">{error}</p>}
+ </form></details></article>;
+}
+export default function OwnerAdmin(){
+ const [month,setMonth]=useState(monthNow),[reload,setReload]=useState(0),[state,setState]=useState({data:null,loading:true,error:''});
+ useEffect(()=>{let alive=true;setState({data:null,loading:true,error:''});getOwnerUsage(month).then(data=>{if(alive)setState({data,loading:false,error:''});}).catch(e=>{if(alive)setState({data:null,loading:false,error:e.message});});return()=>{alive=false;};},[month,reload]);
+ return <section className="space-y-6"><header className="flex flex-wrap items-start justify-between gap-4"><div><p className="eyebrow flex items-center gap-2"><ShieldCheck size={16}/>SOLO PROPIETARIO</p><h1 className="text-3xl font-semibold">ADMIN</h1><p className="text-slate-500 mt-2">Consumo y rentabilidad por restaurante.</p></div><div className="flex flex-wrap gap-3 items-end"><label>Mes del informe<input type="month" min="2020-01" max="2100-01" value={month} onChange={e=>{if(/^\d{4}-\d{2}$/.test(e.target.value))setMonth(e.target.value);}}/></label><button className="secondary" disabled={state.loading} onClick={()=>setReload(n=>n+1)}>Actualizar</button></div></header>
+ <div className="notice">Los mensajes y tokens medidos son reales. Los costos y el margen se calculan con las tarifas que configures. La sincronización automática de tokens está pendiente de la credencial n8n API; «Actualizar» consulta los datos ya guardados.</div>
+ {state.loading?<p role="status" className="panel">Cargando consumo…</p>:state.error?<div className="notice error" role="alert">{state.error}<button className="secondary ml-3" onClick={()=>setReload(n=>n+1)}>Reintentar</button></div>:<div className="space-y-5">{(state.data?.restaurants||[]).map(row=><RestaurantUsage key={month+':'+reload+':'+row.restaurant_id} row={row} month={month}/>)}{!state.data?.restaurants?.length&&<p className="panel">No hay restaurantes registrados.</p>}{state.data?.unattributed_executions>0&&<p className="notice">{state.data.unattributed_executions} ejecuciones sin restaurante identificado no se asignaron a ningún cliente.</p>}</div>}
+ </section>;
+}

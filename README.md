@@ -41,6 +41,10 @@ Fidelización no tenía implementación y se identifica como pendiente. Prueba I
 
 La profesionalización visual, los cambios de rendimiento y los resultados actuales están en [validación de fases](PHASES-VALIDATION.md).
 
+## ADMIN del propietario
+
+La cuenta propietaria tiene un módulo privado `/admin` con consumo real registrado y costos editables por restaurante/mes. Los servicios, tarifas IA, nombre/precio del plan y cambio USD/COP recalculan el total y margen. La autorización se verifica también en Supabase. La sincronización continua de tokens requiere configurar n8n API; se importó el histórico disponible y se preparó una plantilla portable. Ver [alcance y pruebas ADMIN](ADMIN-VALIDATION.md).
+
 ## Verificación
 
 - `npm test`: métricas, exclusión de pruebas, estados y día local.

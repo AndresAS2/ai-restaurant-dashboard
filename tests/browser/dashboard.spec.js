@@ -2,7 +2,9 @@ import {test,expect} from '@playwright/test';
 const host='https://aqxgvlygrhdssxjmjxqb.supabase.co';
 const restaurant={id:'demo-burger-ai',name:'Demo Burger AI',status:'active'};
 const now=new Date().toISOString();
-async function setup(page,{empty=false,denied=false}={}){
+async function setup(page,{empty=false,denied=false,owner=false}={}){
+ const email=owner?'suarezjulian2227@gmail.com':'test@example.com';
+ const reports={};
  const db={
  restaurants:[{...restaurant}],
  restaurant_users:denied?[]:[{restaurant_id:restaurant.id,restaurants:restaurant}],
@@ -14,12 +16,18 @@ async function setup(page,{empty=false,denied=false}={}){
  restaurant_settings:[{id:1,restaurant_id:restaurant.id,config:{welcome:'Hola',untouched:'preserved',menu_images:[]}}]
  };
  const writes=[];
- await page.addInitScript(({key})=>{localStorage.setItem(key,JSON.stringify({access_token:'test-token',refresh_token:'test-refresh',expires_at:Math.floor(Date.now()/1000)+7200,expires_in:7200,token_type:'bearer',user:{id:'user1',email:'test@example.com',app_metadata:{}}}));},{key:'sb-aqxgvlygrhdssxjmjxqb-auth-token'});
+ await page.addInitScript(({key,email})=>{localStorage.setItem(key,JSON.stringify({access_token:'test-token',refresh_token:'test-refresh',expires_at:Math.floor(Date.now()/1000)+7200,expires_in:7200,token_type:'bearer',user:{id:'user1',email,app_metadata:{}}}));},{key:'sb-aqxgvlygrhdssxjmjxqb-auth-token',email});
  await page.route(host+'/**',async route=>{
  const req=route.request(),u=new URL(req.url());
  if(req.method()==='OPTIONS')return route.fulfill({status:200,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}});
- if(u.pathname.includes('/auth/'))return route.fulfill({json:{id:'user1',email:'test@example.com',app_metadata:{}}});
+ if(u.pathname.includes('/auth/'))return route.fulfill({json:{id:'user1',email,app_metadata:{}}});
  const table=u.pathname.split('/').at(-1);
+ if(u.pathname.includes('/rpc/')){
+ if(!owner)return route.fulfill({status:403,json:{message:'Forbidden'}});
+ const body=req.postDataJSON();
+ if(table==='save_owner_finance'){reports[body.p_month]=body.p_values;writes.push({table,body});return route.fulfill({json:null});}
+ if(table==='owner_usage_report')return route.fulfill({json:{restaurants:[{restaurant_id:restaurant.id,restaurant_name:restaurant.name,messages:20,test_messages:2,tokens_used:1000000,input_tokens:800000,output_tokens:200000,executions:5,measured_executions:5,unmeasured_executions:0,db_bytes:1000,storage_mb:0,finance:reports[body.p_month]||null}]}});
+ }
  if(!(table in db))return route.fulfill({status:404,json:{message:'Unknown table '+table}});
  if(req.method()==='POST')expect(req.postDataJSON().restaurant_id).toBe(restaurant.id);
  else if(table==='restaurants')expect(u.searchParams.get('id')).toBe('eq.demo-burger-ai');
@@ -204,4 +212,30 @@ test('mobile navigation and conversation list work without hiding modules',async
  await page.getByRole('button',{name:'Volver a conversaciones'}).click();
  await expect(page.getByLabel('Buscar conversación')).toBeVisible();
  await page.screenshot({path:'test-results/crm-mobile.png',fullPage:true});
+});
+
+test('ADMIN is hidden and direct navigation is denied for other accounts',async({page})=>{
+ await setup(page);await page.goto('/dashboard');await expect(page.getByRole('heading',{name:'Demo Burger AI',level:1})).toBeVisible();
+ await expect(page.getByRole('link',{name:'ADMIN',exact:true})).toHaveCount(0);
+ await page.goto('/admin');await expect(page).toHaveURL(/dashboard/);
+});
+
+test('owner ADMIN recalculates, saves costs and separates months on mobile',async({page})=>{
+ const {writes}=await setup(page,{owner:true});await page.setViewportSize({width:390,height:844});await page.goto('/admin');
+ await expect(page.getByRole('heading',{name:'ADMIN',exact:true})).toBeVisible();
+ await page.getByText('Editar plan y costos',{exact:true}).click();
+ await page.getByLabel('Nombre del plan',{exact:true}).fill('Profesional');
+ await page.getByLabel('Precio mensual del plan (COP)',{exact:true}).fill('100000');
+ await page.getByLabel('Cambio: COP por 1 USD',{exact:true}).fill('4000');
+ await page.getByLabel('IA: USD por millón de tokens de entrada',{exact:true}).fill('1');
+ await page.getByLabel('IA: USD por millón de tokens de salida',{exact:true}).fill('2');
+ await page.getByRole('button',{name:'Agregar servicio',exact:true}).click();
+ await page.getByLabel('Servicio 1',{exact:true}).fill('VPS');await page.getByLabel('Importe 1',{exact:true}).fill('10');
+ await expect(page.getByText('11,2 USD',{exact:true})).toBeVisible();await expect(page.getByText('55,2%',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Guardar plan y costos',exact:true}).click();await expect(page.getByText('Costos guardados.',{exact:true})).toBeVisible();
+ expect(writes.some(w=>w.table==='save_owner_finance'&&w.body.p_values.services[0].name==='VPS')).toBeTruthy();
+ await page.getByRole('button',{name:'Actualizar',exact:true}).click();await expect(page.getByText('11,2 USD',{exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
+ await page.screenshot({path:'test-results/admin-mobile.png',fullPage:true});
+ await page.getByLabel('Mes del informe',{exact:true}).fill('2025-01');await expect(page.getByText('Sin configurar',{exact:true})).toBeVisible();
 });
