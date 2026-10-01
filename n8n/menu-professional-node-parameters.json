@@ -1,0 +1,81 @@
+[
+  {
+    "name": "Menu?",
+    "parameters": {
+      "rules": {
+        "values": [
+          {
+            "conditions": {
+              "options": {
+                "caseSensitive": true,
+                "leftValue": "",
+                "typeValidation": "strict",
+                "version": 2
+              },
+              "conditions": [
+                {
+                  "id": "saas-menu-check",
+                  "operator": {
+                    "type": "boolean",
+                    "operation": "true",
+                    "singleValue": true
+                  },
+                  "leftValue": "={{ Boolean($json.menu_context?.products?.length || ($json.restaurant_config?.menu_images || []).some(a => a.active !== false && /^https:\\/\\//i.test(a.url || ''))) }}"
+                }
+              ],
+              "combinator": "and"
+            },
+            "renameOutput": true,
+            "outputKey": "Menu"
+          }
+        ]
+      },
+      "options": {
+        "fallbackOutput": "extra",
+        "renameFallbackOutput": "Other"
+      }
+    }
+  },
+  {
+    "name": "Send message2",
+    "parameters": {
+      "operation": "send",
+      "phoneNumberId": "={{ $('Normalize').item.json.restaurant_channel_id }}",
+      "recipientPhoneNumber": "={{ $('Normalize').item.json.phone }}",
+      "textBody": "={{ 'Menú de ' + $json.restaurant_config.name + ':\\n' + (($json.menu_context?.products || []).map(p => p.name + ' — ' + p.price + ' ' + $json.currency).join('\\n') || 'Consulta el menú adjunto:') + '\\n' + ($json.restaurant_config.menu_images || []).filter(a => a.active !== false && /^https:\\/\\//i.test(a.url || '')).slice(0,5).map(a => (a.caption || 'Menú') + ': ' + a.url).join('\\n') }}",
+      "additionalFields": {}
+    }
+  },
+  {
+    "name": "Prepare Agent Context",
+    "parameters": {
+      "mode": "runOnceForEachItem",
+      "jsCode": "const x=$json;\nconst c={...(x.restaurant_config||{})};\nfor(const k of ['test_mode','whatsapp_phone_number_id','owner_whatsapp'])delete c[k];\nif(Array.isArray(c.payment_options))c.payment_options=c.payment_options.filter(p=>p.active!==false);\nconst d=x.pending_draft||{},s=d.state||{};\nconst products=(x.menu_context?.products||[]).map(({id,name,price,available,category_id,description,ingredients})=>({id,name,price,available,category_id,description,ingredients}));\nconst payload={restaurant:c,menu:{products,categories:x.menu_context?.categories||[]},customer_message:x.message,pending_draft:{status:d.status,expired:d.expired,state:s},clarification:x.clarification,intent:x.intent,rules:['Responde solo consultas. No afirmes haber añadido, cambiado o confirmado pedidos.','No inventes precios, ingredientes ni disponibilidad.','Si pide atención humana o reserva explica que integración está pendiente.','Si pide precio responde precio del catálogo sin pedir datos personales.']};\nreturn {json:{...x,guardrailsInput:JSON.stringify(payload)}};"
+    }
+  },
+  {
+    "name": "Supabase Restaurant Registry PostgreSQL",
+    "parameters": {
+      "operation": "executeQuery",
+      "query": "SELECT count(*) OVER() AS binding_count,r.id AS restaurant_id, r.name, r.status, rs.language, rs.currency, rs.timezone, CASE $4::text WHEN 'PAYMENT_QUERY' THEN jsonb_build_object('paymentMethods',rs.config->'paymentMethods','payment_methods',rs.config->'payment_methods','payment_options',rs.config->'payment_options') WHEN 'HOURS_QUERY' THEN jsonb_build_object('restaurant_profile',jsonb_build_object('hours',rs.config->'restaurant_profile'->'hours')) WHEN 'LOCATION_QUERY' THEN jsonb_build_object('restaurant_profile',jsonb_build_object('address',rs.config->'restaurant_profile'->'address')) WHEN 'GENERAL_QUERY' THEN jsonb_build_object('welcome',rs.config->'welcome') ELSE rs.config END AS config,\nCASE WHEN $4::text IN ('PAYMENT_QUERY','HOURS_QUERY','LOCATION_QUERY','GENERAL_QUERY') THEN '[]'::jsonb ELSE COALESCE((SELECT jsonb_agg(jsonb_build_object('id',mp.id,'restaurant_id',mp.restaurant_id,'name',mp.name,'price',mp.price,'category_id',mp.category_id,'available',mp.available,'description',mp.description,'ingredients',mp.ingredients) ORDER BY mp.sort_order,mp.name) FROM public.menu_products mp WHERE mp.restaurant_id=r.id AND mp.available=true),'[]'::jsonb) END AS products,\nCASE WHEN $4::text IN ('PAYMENT_QUERY','HOURS_QUERY','LOCATION_QUERY','GENERAL_QUERY') THEN '[]'::jsonb ELSE COALESCE((SELECT jsonb_agg(jsonb_build_object('id',mc.id,'name',mc.name) ORDER BY mc.sort_order,mc.name) FROM public.menu_categories mc WHERE mc.restaurant_id=r.id),'[]'::jsonb) END AS categories\nFROM public.restaurants r LEFT JOIN public.restaurant_settings rs ON rs.restaurant_id=r.id WHERE ($2='chat' AND r.id=$1) OR ($2='whatsapp' AND rs.config->>'whatsapp_phone_number_id'=$3);",
+      "options": {
+        "queryBatching": "single",
+        "queryReplacement": "={{ [$json.restaurant_id || '',$json.type,$json.restaurant_channel_id || '',$json.simple_query ? $json.early_intent : 'OTHER'] }}"
+      }
+    }
+  },
+  {
+    "name": "Chat2",
+    "parameters": {
+      "mode": "runOnceForEachItem",
+      "jsCode": "const x=$json;const assets=(x.restaurant_config.menu_images||[]).filter(a=>a&&typeof a.url==='string'&&/^https:\\/\\//i.test(a.url)&&a.active!==false).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)).slice(0,5);\nconst output=assets.length?assets.map(a=>(a.mime==='application/pdf'?'[':'![')+String(a.caption||'Menú').replace(/[\\[\\]\\n]/g,'')+']('+encodeURI(a.url).replace(/[()]/g,c=>c==='('?'%28':'%29')+')').join('\\n\\n'):'Menú de '+x.restaurant_config.name+':\\n'+x.menu_context.products.map(p=>'• '+p.name+' — '+Number(p.price).toLocaleString('es-CO')+' '+x.currency).join('\\n')+'\\n\\nAún no hay fotos del menú cargadas. ¿Qué te gustaría pedir?';\nreturn {json:{...x,output,event_type:'menu_requested',media:assets}};"
+    }
+  },
+  {
+    "name": "Simple Query Reply",
+    "parameters": {
+      "mode": "runOnceForEachItem",
+      "jsCode": "const x=$json,c=x.restaurant_config||{},p=c.restaurant_profile||{};\nlet output,intent='general',fast_route='reply';\nif(x.early_intent==='MENU_QUERY'){\n intent='menu';\n if(x.menu_context?.products?.length||(c.menu_images||[]).some(a=>a.active!==false&&/^https:\\/\\//i.test(a.url||'')))fast_route='menu';\n else output='El restaurante todavía no tiene productos disponibles en su menú. Podemos consultar con el equipo.';\n}else if(x.early_intent==='PAYMENT_QUERY'){\n const v=typeof c.paymentMethods==='string'?c.paymentMethods.trim():'';\n const methods=Array.isArray(c.payment_methods)?c.payment_methods.filter(m=>typeof m==='string'&&m.trim()):[];\n output=v||methods.length?'Métodos de pago del restaurante:\\n'+(v||methods.join(', ')):'El restaurante todavía no ha indicado sus métodos de pago. Es necesario confirmarlos con el equipo.';\n if(Array.isArray(c.payment_options)){\n const active=c.payment_options.filter(m=>m&&m.active!==false);\n output=active.length?'Métodos de pago del restaurante:\\n'+active.map(m=>[m.name,m.number,m.description].filter(Boolean).join(' — ')).join('\\n'):'No hay métodos de pago habilitados. Confirma con el restaurante.';\n const images=active.filter(m=>/^https:\\/\\//i.test(m.image_url||'')).slice(0,5);\n if(images.length)output+='\\n\\n'+images.map(m=>x.type==='chat'?'!['+String(m.name||'Pago').replace(/[\\[\\]\\n]/g,'')+']('+encodeURI(m.image_url).replace(/[()]/g,c=>c==='('?'%28':'%29')+')':m.name+': '+m.image_url).join('\\n\\n');\n }\n}else if(x.early_intent==='HOURS_QUERY'){\n const h=Array.isArray(p.hours)?p.hours.filter(h=>h&&typeof h.day==='string'):[];\n output=h.length?'Horario configurado del restaurante:\\n'+h.map(h=>h.day+': '+(h.closed?'Cerrado':h.open&&h.close?h.open+'–'+h.close+(h.close<h.open?' (cierre al día siguiente)':''):'Por confirmar')).join('\\n'):'El restaurante todavía no ha indicado su horario.';\n}else if(x.early_intent==='LOCATION_QUERY'){\n output=typeof p.address==='string'&&p.address.trim()?'Dirección del restaurante: '+p.address.trim():'El restaurante todavía no ha indicado su dirección.';\n}else output=c.welcome||'Hola, puedo mostrarte el menú, consultar precios o ayudarte con tu pedido.';\nreturn {json:{...x,intent,fast_route,output}};"
+    }
+  }
+]

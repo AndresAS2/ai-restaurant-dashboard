@@ -1,4 +1,48 @@
 import {test,expect} from '@playwright/test';
+test('menu files extract into editable review and save only on confirmation',async({page})=>{
+ const {writes,uploads}=await setup(page);
+ await page.goto('/menu');await page.getByText('Importar menú desde imágenes o PDF',{exact:true}).click();
+ await page.getByLabel('Archivos del menú').setInputFiles({name:'menu.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 test fixture')});
+ await page.getByRole('button',{name:'Subir 1 archivo(s)',exact:true}).click();
+ await expect.poll(()=>uploads.length).toBe(1);
+ await page.getByRole('button',{name:'Extraer productos',exact:true}).click();
+ await expect(page.getByLabel('Nombre extraído')).toHaveValue('Pizza de prueba');
+ expect(writes.some(w=>w.table==='import_reviewed_menu')).toBeFalsy();
+ await page.getByLabel('Precio extraído (COP)').fill('27000');
+ await page.getByRole('button',{name:'Confirmar y guardar productos seleccionados'}).click();
+ await expect(page.getByText('1 productos guardados.')).toBeVisible();
+ expect(writes.find(w=>w.table==='import_reviewed_menu').body.p_products[0].price).toBe(27000);
+});
+test('logo preview and active visual payment save compatible config on mobile',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ const {writes,uploads}=await setup(page);
+ await page.goto('/settings');
+ const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aL1sAAAAASUVORK5CYII=','base64');
+ await page.getByLabel('Subir logo',{exact:true}).setInputFiles({name:'logo.png',mimeType:'image/png',buffer:png});
+ await expect(page.getByAltText('Vista previa de logo.png')).toBeVisible();
+ await page.getByRole('button',{name:'Subir 1 archivo(s)',exact:true}).click();
+ await expect.poll(()=>uploads.length).toBe(1);
+ await page.getByRole('button',{name:'Agregar método de pago'}).click();
+ await page.getByLabel('Número o cuenta').fill('3000000000');
+ await page.getByLabel('Instrucciones de pago').fill('Indica tu número de pedido');
+ await page.getByLabel('Imagen para Nequi').setInputFiles({name:'qr.png',mimeType:'image/png',buffer:png});
+ await page.getByRole('button',{name:'Subir 1 archivo(s)',exact:true}).click();
+ await expect.poll(()=>uploads.length).toBe(2);
+ await page.getByRole('button',{name:'Guardar configuración'}).click();
+ await expect(page.getByText('Configuración guardada.',{exact:true})).toBeVisible();
+ const c=writes.find(w=>w.table==='restaurant_settings').body.config;
+ expect(c.payment_options[0].image_url).toContain('restaurant-assets/demo-burger-ai');
+ expect(c.restaurant_profile.logo_url).toContain('restaurant-assets/demo-burger-ai');
+ expect(c.payment_methods).toEqual(['nequi']);expect(c.paymentMethods).toContain('3000000000');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
+ await page.screenshot({path:'test-results/menu-settings-mobile.png',fullPage:true});
+});
+test('product with order history cannot be deleted',async({page})=>{
+ await setup(page);await page.goto('/menu');await page.getByRole('button',{name:'Editar producto'}).click();
+ await page.getByText('Eliminar producto',{exact:true}).click();
+ await page.getByRole('button',{name:'Confirmar eliminación'}).click();
+ await expect(page.getByRole('alert')).toContainText('historial de pedidos');
+});
 const host='https://aqxgvlygrhdssxjmjxqb.supabase.co';
 const restaurant={id:'demo-burger-ai',name:'Demo Burger AI',status:'active'};
 const now=new Date().toISOString();
@@ -16,13 +60,25 @@ async function setup(page,{empty=false,denied=false,owner=false}={}){
  restaurant_settings:[{id:1,restaurant_id:restaurant.id,config:{welcome:'Hola',untouched:'preserved',menu_images:[]}}]
  };
  const writes=[];
+ const uploads=[];
  await page.addInitScript(({key,email})=>{localStorage.setItem(key,JSON.stringify({access_token:'test-token',refresh_token:'test-refresh',expires_at:Math.floor(Date.now()/1000)+7200,expires_in:7200,token_type:'bearer',user:{id:'user1',email,app_metadata:{}}}));},{key:'sb-aqxgvlygrhdssxjmjxqb-auth-token',email});
  await page.route(host+'/**',async route=>{
  const req=route.request(),u=new URL(req.url());
  if(req.method()==='OPTIONS')return route.fulfill({status:200,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}});
  if(u.pathname.includes('/auth/'))return route.fulfill({json:{id:'user1',email,app_metadata:{}}});
  const table=u.pathname.split('/').at(-1);
+ if(u.pathname.includes('/storage/v1/object/public/restaurant-assets/'))return route.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aL1sAAAAASUVORK5CYII=','base64')});
+ if(u.pathname.includes('/storage/v1/object/restaurant-assets/')){
+ expect(u.pathname).toContain('/restaurant-assets/demo-burger-ai/');
+ uploads.push(u.pathname);return route.fulfill({json:{Key:u.pathname.split('/object/')[1]}});
+ }
+ if(u.pathname.includes('/functions/v1/extract-menu')){
+ expect(req.postDataJSON().restaurant_id).toBe(restaurant.id);
+ return route.fulfill({json:{products:[{name:'Pizza de prueba',category:'Pizzas',price:25000,description:'Tomate y queso',ingredients:['tomate','queso'],available:true}]}});
+ }
  if(u.pathname.includes('/rpc/')){
+ if(table==='import_reviewed_menu'){const body=req.postDataJSON();expect(body.p_restaurant_id).toBe(restaurant.id);writes.push({table,body});return route.fulfill({json:body.p_products.length});}
+ if(table==='delete_unused_menu_product')return route.fulfill({status:400,json:{message:'Este producto tiene historial de pedidos. Desactívalo para conservarlo.'}});
  if(!owner)return route.fulfill({status:403,json:{message:'Forbidden'}});
  const body=req.postDataJSON();
  if(table==='save_owner_finance'){reports[body.p_month]=body.p_values;writes.push({table,body});return route.fulfill({json:null});}
@@ -38,7 +94,7 @@ async function setup(page,{empty=false,denied=false,owner=false}={}){
  const single=req.headers().accept?.includes('object+json');
  return route.fulfill({json:single?(db[table][0]||null):db[table]});
  });
- return {db,writes};
+ return {db,writes,uploads};
 }
 test('six modules render, edit and preserve settings; no JS errors',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
