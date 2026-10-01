@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test tests/metrics.test.js tests/fast-chat.test.js tests/admin.test.js tests/early-query.test.js tests/menu-professional.test.js",
+    "test": "node --test tests/metrics.test.js tests/fast-chat.test.js tests/admin.test.js tests/early-query.test.js tests/menu-professional.test.js tests/ocr-provider.test.js",
     "test:e2e": "playwright test"
   },
   "dependencies": {
