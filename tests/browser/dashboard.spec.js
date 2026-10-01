@@ -1,4 +1,24 @@
 import {test,expect} from '@playwright/test';
+test('unsaved menu and payments cannot be discarded by refresh; saved assets survive reload',async({page})=>{
+ const {writes}=await setup(page);
+ await page.goto('/settings');
+ await page.getByRole('button',{name:'Agregar imagen',exact:true}).click();
+ await page.getByLabel('Enlace de imagen',{exact:true}).fill('https://example.com/menu.jpg');
+ await page.getByRole('button',{name:'Agregar método de pago',exact:true}).click();
+ await page.getByLabel('Número o cuenta').fill('3001234567');
+ await expect(page.getByRole('button',{name:'Actualizar',exact:true})).toBeDisabled();
+ await expect(page.getByText(/Tienes cambios sin guardar/)).toBeVisible();
+ await page.getByRole('button',{name:'Guardar cambios',exact:true}).click();
+ await expect(page.getByText('Configuración guardada.',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Actualizar',exact:true})).toBeEnabled();
+ await page.getByRole('button',{name:'Actualizar',exact:true}).click();
+ await expect(page.getByLabel('Enlace de imagen',{exact:true})).toHaveValue('https://example.com/menu.jpg');
+ await expect(page.getByLabel('Número o cuenta')).toHaveValue('3001234567');
+ await page.reload();
+ await expect(page.getByLabel('Enlace de imagen',{exact:true})).toHaveValue('https://example.com/menu.jpg');
+ await expect(page.getByLabel('Número o cuenta')).toHaveValue('3001234567');
+ expect(writes.find(w=>w.table==='restaurant_settings').body.config.menu_images).toHaveLength(1);
+});
 test('menu files extract into editable review and save only on confirmation',async({page})=>{
  const {writes,uploads}=await setup(page);
  await page.goto('/menu');await page.getByText('Importar menú desde imágenes o PDF',{exact:true}).click();
