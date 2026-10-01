@@ -1,0 +1,3 @@
+const x=$json;const assets=(x.restaurant_config.menu_images||[]).filter(a=>a&&typeof a.url==='string'&&/^https:\/\//i.test(a.url)&&a.active!==false).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)).slice(0,5);
+const output=assets.length?assets.map(a=>(a.mime==='application/pdf'?'[':'![')+String(a.caption||'Menú').replace(/[\[\]\n]/g,'')+']('+encodeURI(a.url).replace(/[()]/g,c=>c==='('?'%28':'%29')+')').join('\n\n'):'Menú de '+x.restaurant_config.name+':\n'+x.menu_context.products.map(p=>'• '+p.name+' — '+Number(p.price).toLocaleString('es-CO')+' '+x.currency).join('\n')+'\n\nAún no hay fotos del menú cargadas. ¿Qué te gustaría pedir?';
+return {json:{...x,output,event_type:'menu_requested',media:assets}};

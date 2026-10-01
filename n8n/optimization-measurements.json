@@ -1,0 +1,80 @@
+[
+  {
+    "beforeId": 142,
+    "afterId": 169,
+    "message": "muéstrame el menú",
+    "before": {
+      "ms": 2842,
+      "tokens": 0
+    },
+    "after": {
+      "ms": 2155,
+      "tokens": 0
+    }
+  },
+  {
+    "beforeId": 143,
+    "afterId": 170,
+    "message": "qué tienen",
+    "before": {
+      "ms": 3176,
+      "tokens": 609
+    },
+    "after": {
+      "ms": 1573,
+      "tokens": 0
+    }
+  },
+  {
+    "beforeId": 144,
+    "afterId": 171,
+    "message": "qué precios tienen",
+    "before": {
+      "ms": 3997,
+      "tokens": 2151
+    },
+    "after": {
+      "ms": 1094,
+      "tokens": 0
+    }
+  },
+  {
+    "beforeId": 147,
+    "afterId": 173,
+    "message": "qué métodos de pago manejan",
+    "before": {
+      "ms": 490,
+      "tokens": 0
+    },
+    "after": {
+      "ms": 334,
+      "tokens": 0
+    }
+  },
+  {
+    "beforeId": 148,
+    "afterId": 172,
+    "message": "horario",
+    "before": {
+      "ms": 2235,
+      "tokens": 1958
+    },
+    "after": {
+      "ms": 522,
+      "tokens": 0
+    }
+  },
+  {
+    "beforeId": 149,
+    "afterId": 158,
+    "message": "dirección",
+    "before": {
+      "ms": 1676,
+      "tokens": 609
+    },
+    "after": {
+      "ms": 392,
+      "tokens": 0
+    }
+  }
+]

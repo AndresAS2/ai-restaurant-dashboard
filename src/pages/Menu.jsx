@@ -1,39 +1,24 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { getMenu } from '../services/menu';
-
+import {useEffect,useState} from 'react';
+import Page from '../components/Page';
+import MenuImport from '../components/MenuImport';
+import {useResource} from '../hooks/useResource';
+import {getMenu,saveProduct,saveCategory,deleteProduct} from '../services/menu';
+import {money} from '../services/format';
+const empty={name:'',description:'',ingredients:[],sort_order:0,price:'',category_id:'',available:true};
 export default function Menu(){
-  const { restaurant } = useAuth();
-  const [menu, setMenu] = useState({ categories: [], products: [] });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function load(){
-      if(!restaurant?.id) return;
-      const data = await getMenu(restaurant.id);
-      setMenu(data);
-      setLoading(false);
-    }
-
-    load();
-  }, [restaurant]);
-
-  if(loading) return <p>Cargando menú...</p>;
-
-  return (
-    <div>
-      <h1 className="text-2xl font-bold">Menú IA</h1>
-      <p className="text-gray-500 mb-6">Administración inteligente del menú.</p>
-
-      <div className="grid md:grid-cols-2 gap-4">
-        {menu.products.map((product)=>(
-          <div key={product.id} className="bg-white rounded-xl shadow p-4">
-            <h2 className="font-semibold">{product.name}</h2>
-            <p>{product.price}</p>
-            <span>{product.available ? 'Disponible' : 'No disponible'}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+ const r=useResource(getMenu,false),[form,setForm]=useState(null),[cat,setCat]=useState(null),[search,setSearch]=useState(''),[category,setCategory]=useState('all'),[availability,setAvailability]=useState('all'),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ const update=(k,v)=>setForm(f=>({...f,[k]:v}));
+ useEffect(()=>{setForm(null);setCat(null);setError('');setCategory('all');},[r.restaurant?.id]);
+ async function remove(){if(!form?.id)return;setBusy(true);setError('');try{await deleteProduct(r.restaurant.id,form.id);setForm(null);await r.refresh();}catch(e){setError(e.message);}finally{setBusy(false);}}
+ async function save(e,type){e.preventDefault();setBusy(true);setError('');try{if(type==='category'){await saveCategory(r.restaurant.id,cat);setCat(null);}else{await saveProduct(r.restaurant.id,form);setForm(null);}await r.refresh();}catch(e){setError(e.message);}finally{setBusy(false);}}
+ const products=(r.data?.products||[]).filter(p=>String(p.name+' '+(p.description||'')).toLowerCase().includes(search.toLowerCase())&&(category==='all'||p.category_id===category)&&(availability==='all'||p.available===(availability==='available'))).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)||a.name.localeCompare(b.name));
+ return <Page title="Menú" description="Catálogo, categorías, precios y disponibilidad." resource={r} actions={<><button className="secondary" disabled={busy||r.loading||!!r.error} onClick={()=>{setCat({name:'',active:true});setForm(null);}}>Nueva categoría</button><button className="primary" disabled={busy||r.loading||!!r.error} onClick={()=>{setForm({...empty});setCat(null);}}>Nuevo producto</button></>}>
+ {error&&<p className="notice error" role="alert">{error}</p>}
+ {r.restaurant?.id&&<MenuImport key={r.restaurant.id} restaurantId={r.restaurant.id} onSaved={r.refresh}/>}
+ {cat&&<form className="panel space-y-3" onSubmit={e=>save(e,'category')}><h2 className="font-semibold">{cat.id?'Editar categoría':'Nueva categoría'}</h2><label>Nombre de categoría<input required maxLength={100} value={cat.name} onChange={e=>setCat({...cat,name:e.target.value})}/></label><label>Orden de categoría<input disabled={busy} type="number" min="0" max="100000" value={cat.sort_order||0} onChange={e=>setCat({...cat,sort_order:e.target.value})}/></label><label className="flex gap-2 items-center"><input type="checkbox" checked={cat.active} onChange={e=>setCat({...cat,active:e.target.checked})}/>Categoría activa</label><button className="primary" disabled={busy}>Guardar categoría</button><button type="button" className="secondary ml-2" disabled={busy} onClick={()=>setCat(null)}>Cancelar</button></form>}
+ {form&&<form onSubmit={save} className="panel grid sm:grid-cols-2 gap-4"><h2 className="font-semibold sm:col-span-2">{form.id?'Editar producto':'Nuevo producto'}</h2><label>Nombre<input required maxLength={150} value={form.name} onChange={e=>update('name',e.target.value)}/></label><label>Precio (COP)<input required type="number" min="0" step="1" value={form.price} onChange={e=>update('price',e.target.value)}/></label><label>Categoría<select value={form.category_id||''} onChange={e=>update('category_id',e.target.value)}><option value="">Sin categoría</option>{r.data?.categories.map(c=><option value={c.id} key={c.id}>{c.name}{!c.active?' (inactiva)':''}</option>)}</select></label><label className="flex gap-2 items-center"><input type="checkbox" checked={form.available} onChange={e=>update('available',e.target.checked)}/>Disponible</label><label className="sm:col-span-2">Descripción<textarea maxLength={2000} value={form.description||''} onChange={e=>update('description',e.target.value)}/></label><label>Ingredientes (separados por comas)<textarea disabled={busy} maxLength={5000} value={Array.isArray(form.ingredients)?form.ingredients.join(', '):form.ingredients||''} onChange={e=>update('ingredients',e.target.value)}/></label><label>Orden visual<input disabled={busy} type="number" min="0" max="100000" value={form.sort_order||0} onChange={e=>update('sort_order',e.target.value)}/></label>{form.id&&<details className="sm:col-span-2"><summary>Eliminar producto</summary><p className="text-sm my-3">Si tiene pedidos asociados, desactívalo para conservar el historial. La eliminación es definitiva.</p><button type="button" className="secondary" disabled={busy} onClick={remove}>Confirmar eliminación</button></details>}<div><button className="primary" disabled={busy}>{busy?'Guardando…':'Guardar producto'}</button><button type="button" className="secondary ml-2" disabled={busy} onClick={()=>setForm(null)}>Cancelar</button></div></form>}
+ <div className="grid sm:grid-cols-3 gap-3"><input aria-label="Buscar producto" placeholder="Buscar producto" value={search} onChange={e=>setSearch(e.target.value)}/><select aria-label="Filtrar categoría" value={category} onChange={e=>setCategory(e.target.value)}><option value="all">Todas las categorías</option>{r.data?.categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select><select aria-label="Filtrar disponibilidad" value={availability} onChange={e=>setAvailability(e.target.value)}><option value="all">Toda disponibilidad</option><option value="available">Disponibles</option><option value="unavailable">Agotados</option></select></div>
+ <div className="flex flex-wrap gap-2">{r.data?.categories.map(c=><button className="badge" disabled={busy} key={c.id} onClick={()=>{setCat(c);setForm(null);}} title="Editar categoría">{c.name}{!c.active?' · Inactiva':''}</button>)}</div>
+ <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">{products.map(p=><article className="panel" key={p.id}><span className="badge">{p.available?'Disponible':'Agotado'}</span><p className="text-xs text-slate-500 mt-3">{r.data.categories.find(c=>c.id===p.category_id)?.name||'Sin categoría'}</p><h2 className="text-lg font-semibold mt-1">{p.name}</h2><p className="text-slate-500 text-sm mt-1">{p.description}</p><p className="font-semibold mt-3">{money(p.price)}</p><button className="secondary mt-4" disabled={busy} onClick={()=>{setForm(p);setCat(null);setError('');}}>Editar producto</button></article>)}</div>
+ {!products.length&&<p className="panel">{r.data?.products.length?'No hay productos para estos filtros.':'Agrega el primer producto de tu restaurante.'}</p>}</Page>;
 }
