@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './routes/ProtectedRoute';
 import MasterRoute from './routes/MasterRoute';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 import DashboardLayout from './layouts/DashboardLayout';
 import MasterLayout from './layouts/MasterLayout';
 import Dashboard from './pages/Dashboard';
@@ -19,6 +20,7 @@ export default function App() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
