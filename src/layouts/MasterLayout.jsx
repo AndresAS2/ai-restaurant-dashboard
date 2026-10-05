@@ -8,8 +8,7 @@ export default function MasterLayout() {
         <h2 className="font-bold text-xl mb-6">Panel Maestro</h2>
         <nav className="space-y-3 flex flex-col">
           <Link to="/dashboard">Volver al dashboard</Link>
-          <Link to="/master/restaurants">Restaurantes</Link>
-          <Link to="/master/restaurants/create">Crear restaurante</Link>
+          <Link to="/master/restaurants">Solicitudes y restaurantes</Link>
         </nav>
       </aside>
       <main className="flex-1 p-6">
