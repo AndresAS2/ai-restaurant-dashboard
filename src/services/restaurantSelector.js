@@ -1,8 +1,8 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from './supabase';
 
 /**
- * Obtiene restaurantes disponibles para el panel maestro.
- * Solo lectura: no modifica estructuras existentes.
+ * Obtiene los restaurantes visibles para el usuario autenticado.
+ * RLS limita la consulta al tenant permitido.
  */
 export async function getAvailableRestaurants() {
   const { data, error } = await supabase
