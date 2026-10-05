@@ -7,34 +7,46 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [restaurant, setRestaurant] = useState(null);
+  const [isMasterAdmin, setIsMasterAdmin] = useState(false);
   const [error, setError] = useState(null);
 
-  async function loadRestaurant(currentSession) {
+  async function loadAccess(currentSession) {
     if (!currentSession?.user) {
       setRestaurant(null);
+      setIsMasterAdmin(false);
       return;
     }
 
-    const { data, error } = await supabase
-      .from('restaurant_users')
-      .select('restaurant_id, restaurants(*)')
-      .eq('user_id', currentSession.user.id)
-      .single();
+    setError(null);
 
-    if (error) {
-      setError(error.message);
+    const [restaurantResult, adminResult] = await Promise.all([
+      supabase
+        .from('restaurant_users')
+        .select('restaurant_id, restaurants(*)')
+        .eq('user_id', currentSession.user.id)
+        .maybeSingle(),
+      supabase
+        .from('platform_admins')
+        .select('user_id')
+        .eq('user_id', currentSession.user.id)
+        .maybeSingle(),
+    ]);
+
+    if (restaurantResult.error) {
+      setError(restaurantResult.error.message);
       setRestaurant(null);
-      return;
+    } else {
+      setRestaurant(restaurantResult.data?.restaurants || null);
     }
 
-    setRestaurant(data?.restaurants || null);
+    setIsMasterAdmin(Boolean(adminResult.data?.user_id));
   }
 
   useEffect(() => {
     async function init() {
       const { data } = await supabase.auth.getSession();
       setSession(data.session);
-      await loadRestaurant(data.session);
+      await loadAccess(data.session);
       setLoading(false);
     }
 
@@ -42,7 +54,7 @@ export function AuthProvider({ children }) {
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
       setSession(nextSession);
-      await loadRestaurant(nextSession);
+      await loadAccess(nextSession);
     });
 
     return () => listener.subscription.unsubscribe();
@@ -52,6 +64,7 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut();
     setSession(null);
     setRestaurant(null);
+    setIsMasterAdmin(false);
   }
 
   return (
@@ -59,6 +72,7 @@ export function AuthProvider({ children }) {
       session,
       user: session?.user || null,
       restaurant,
+      isMasterAdmin,
       loading,
       error,
       signOut
