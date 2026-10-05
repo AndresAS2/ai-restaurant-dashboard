@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const items = [
  ['Inicio','/'],
@@ -8,11 +9,12 @@ const items = [
  ['Conversaciones','/conversations'],
  ['Entrenamiento IA','/training'],
  ['Fidelización','/loyalty'],
- ['Usuarios','/master/users/create'],
  ['Configuración','/settings'],
 ];
 
 export default function Sidebar(){
+ const { isMasterAdmin } = useAuth();
+
  return <aside className="w-64 min-h-screen bg-slate-900 text-white p-5">
    <h1 className="text-xl font-bold mb-8">AI Restaurant</h1>
    <nav className="space-y-2">
@@ -21,6 +23,17 @@ export default function Sidebar(){
       {label}
     </NavLink>
    ))}
+   {isMasterAdmin && (
+    <>
+      <div className="my-4 border-t border-slate-700" />
+      <NavLink to="/master/restaurants" className="block rounded-lg px-3 py-2 hover:bg-slate-800">
+        Restaurantes SaaS
+      </NavLink>
+      <NavLink to="/master/restaurants/create" className="block rounded-lg px-3 py-2 hover:bg-slate-800">
+        Crear restaurante
+      </NavLink>
+    </>
+   )}
    </nav>
  </aside>
 }
