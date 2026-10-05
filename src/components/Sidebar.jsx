@@ -8,6 +8,7 @@ const items = [
  ['Conversaciones','/conversations'],
  ['Entrenamiento IA','/training'],
  ['Fidelización','/loyalty'],
+ ['Usuarios','/master/users/create'],
  ['Configuración','/settings'],
 ];
 
