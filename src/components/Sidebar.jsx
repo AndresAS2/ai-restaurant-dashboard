@@ -27,10 +27,7 @@ export default function Sidebar(){
     <>
       <div className="my-4 border-t border-slate-700" />
       <NavLink to="/master/restaurants" className="block rounded-lg px-3 py-2 hover:bg-slate-800">
-        Restaurantes SaaS
-      </NavLink>
-      <NavLink to="/master/restaurants/create" className="block rounded-lg px-3 py-2 hover:bg-slate-800">
-        Crear restaurante
+        Solicitudes y restaurantes
       </NavLink>
     </>
    )}
