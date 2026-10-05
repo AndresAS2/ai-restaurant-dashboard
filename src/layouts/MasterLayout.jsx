@@ -7,9 +7,9 @@ export default function MasterLayout() {
       <aside className="w-64 p-5 border-r bg-white">
         <h2 className="font-bold text-xl mb-6">Panel Maestro</h2>
         <nav className="space-y-3 flex flex-col">
+          <Link to="/dashboard">Volver al dashboard</Link>
           <Link to="/master/restaurants">Restaurantes</Link>
-          <Link to="/master/users">Usuarios</Link>
-          <Link to="/master/users/create">Crear usuario</Link>
+          <Link to="/master/restaurants/create">Crear restaurante</Link>
         </nav>
       </aside>
       <main className="flex-1 p-6">
