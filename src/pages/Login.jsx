@@ -74,39 +74,93 @@ export default function Login() {
     }
   }
 
+  async function handleForgotPassword(e) {
+    e.preventDefault();
+    resetFeedback();
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      setError('Ingresa el correo de tu cuenta');
+      return;
+    }
+
+    setLoading(true);
+
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    setLoading(false);
+
+    if (resetError) {
+      if (
+        String(resetError.message || '').toLowerCase().includes('rate limit') ||
+        String(resetError.message || '').toLowerCase().includes('email rate')
+      ) {
+        setError('Se alcanzó temporalmente el límite de correos. Espera un poco y vuelve a intentarlo.');
+        return;
+      }
+
+      setError(resetError.message || 'No se pudo enviar el correo de recuperación');
+      return;
+    }
+
+    setMessage('Te enviamos un enlace para cambiar tu contraseña. Revisa tu correo.');
+  }
+
+  const title =
+    mode === 'login'
+      ? 'Tu operación empieza aquí'
+      : mode === 'register'
+        ? 'Crear restaurante'
+        : 'Recuperar contraseña';
+
+  const description =
+    mode === 'login'
+      ? 'Ingresa para administrar tu restaurante.'
+      : mode === 'register'
+        ? 'Crea tu acceso. El restaurante quedará pendiente de aprobación antes de poder usar el sistema.'
+        : 'Escribe tu correo y te enviaremos un enlace seguro para crear una contraseña nueva.';
+
   return (
     <main className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md rounded-2xl border bg-white p-7 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
           AI Restaurant
         </p>
-        <h1 className="mt-2 text-2xl font-bold">
-          {mode === 'login' ? 'Tu operación empieza aquí' : 'Crear restaurante'}
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          {mode === 'login'
-            ? 'Ingresa para administrar tu restaurante.'
-            : 'Crea tu acceso. El restaurante quedará pendiente de aprobación antes de poder usar el sistema.'}
-        </p>
 
-        <div className="mt-5 grid grid-cols-2 rounded-lg bg-slate-100 p-1">
-          <button
-            type="button"
-            onClick={() => { setMode('login'); resetFeedback(); }}
-            className={'rounded-md px-3 py-2 text-sm font-medium ' + (mode === 'login' ? 'bg-white shadow-sm' : 'text-slate-500')}
-          >
-            Ingresar
-          </button>
-          <button
-            type="button"
-            onClick={() => { setMode('register'); resetFeedback(); }}
-            className={'rounded-md px-3 py-2 text-sm font-medium ' + (mode === 'register' ? 'bg-white shadow-sm' : 'text-slate-500')}
-          >
-            Crear restaurante
-          </button>
-        </div>
+        <h1 className="mt-2 text-2xl font-bold">{title}</h1>
+        <p className="mt-2 text-sm text-slate-500">{description}</p>
 
-        <form onSubmit={mode === 'login' ? handleLogin : handleRegister} className="mt-5 space-y-4">
+        {mode !== 'forgot' && (
+          <div className="mt-5 grid grid-cols-2 rounded-lg bg-slate-100 p-1">
+            <button
+              type="button"
+              onClick={() => { setMode('login'); resetFeedback(); }}
+              className={'rounded-md px-3 py-2 text-sm font-medium ' + (mode === 'login' ? 'bg-white shadow-sm' : 'text-slate-500')}
+            >
+              Ingresar
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode('register'); resetFeedback(); }}
+              className={'rounded-md px-3 py-2 text-sm font-medium ' + (mode === 'register' ? 'bg-white shadow-sm' : 'text-slate-500')}
+            >
+              Crear restaurante
+            </button>
+          </div>
+        )}
+
+        <form
+          onSubmit={
+            mode === 'login'
+              ? handleLogin
+              : mode === 'register'
+                ? handleRegister
+                : handleForgotPassword
+          }
+          className="mt-5 space-y-4"
+        >
           {mode === 'register' && (
             <div>
               <label className="mb-1 block text-sm font-medium">Nombre del restaurante</label>
@@ -132,18 +186,34 @@ export default function Login() {
             />
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">Contraseña</label>
-            <input
-              className="w-full rounded-lg border px-3 py-2"
-              type="password"
-              placeholder="Mínimo 8 caracteres"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              minLength={8}
-              required
-            />
-          </div>
+          {mode !== 'forgot' && (
+            <div>
+              <label className="mb-1 block text-sm font-medium">Contraseña</label>
+              <input
+                className="w-full rounded-lg border px-3 py-2"
+                type="password"
+                placeholder="Mínimo 8 caracteres"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                minLength={8}
+                required
+              />
+
+              {mode === 'login' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('forgot');
+                    setPassword('');
+                    resetFeedback();
+                  }}
+                  className="mt-2 text-sm font-medium text-emerald-700 hover:underline"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              )}
+            </div>
+          )}
 
           {mode === 'register' && (
             <div>
@@ -176,8 +246,23 @@ export default function Login() {
               ? 'Procesando...'
               : mode === 'login'
                 ? 'Ingresar'
-                : 'Crear restaurante'}
+                : mode === 'register'
+                  ? 'Crear restaurante'
+                  : 'Enviar enlace de recuperación'}
           </button>
+
+          {mode === 'forgot' && (
+            <button
+              type="button"
+              onClick={() => {
+                setMode('login');
+                resetFeedback();
+              }}
+              className="w-full rounded-lg border px-4 py-2 text-sm font-medium"
+            >
+              Volver a iniciar sesión
+            </button>
+          )}
         </form>
       </div>
     </main>
