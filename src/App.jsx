@@ -13,7 +13,6 @@ import Conversations from './pages/Conversations';
 import Settings from './pages/Settings';
 import AITestChat from './pages/AITestChat';
 import MasterRestaurants from './pages/MasterRestaurants';
-import MasterCreateRestaurant from './pages/MasterCreateUser';
 
 export default function App() {
   return (
@@ -36,8 +35,8 @@ export default function App() {
         <Route element={<MasterRoute />}>
           <Route element={<MasterLayout />}>
             <Route path="/master/restaurants" element={<MasterRestaurants />} />
-            <Route path="/master/restaurants/create" element={<MasterCreateRestaurant />} />
-            <Route path="/master/users/create" element={<Navigate to="/master/restaurants/create" replace />} />
+            <Route path="/master/restaurants/create" element={<Navigate to="/master/restaurants" replace />} />
+            <Route path="/master/users/create" element={<Navigate to="/master/restaurants" replace />} />
           </Route>
         </Route>
 
